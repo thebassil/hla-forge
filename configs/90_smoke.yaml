@@ -1,0 +1,14 @@
+name: smoke
+notes: "Tiny end-to-end check. 400 rows, 3 folds, cheap features only."
+representation:
+  kind: cheap
+  peptide: [blosum]
+  hla: [blosum]
+interaction: concat
+model:
+  kind: ridge
+target: log1p
+splits: [random, peptide, allele]
+n_splits: 3
+seed: 0
+limit: 400

@@ -1,0 +1,10 @@
+.venv/
+__pycache__/
+*.pyc
+artifacts/embeddings/*
+artifacts/results/*
+!artifacts/**/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+.specstory/
+.DS_Store

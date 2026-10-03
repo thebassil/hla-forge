@@ -1,0 +1,13 @@
+name: blosum_xgb
+notes: "Strong PLM-free comparator. If ESM cannot beat this, that is the result."
+representation:
+  kind: cheap
+  peptide: [blosum, physchem]
+  hla: [blosum]
+interaction: concat
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

@@ -1,0 +1,14 @@
+name: esm2t12_interaction_all
+notes: "Interaction ablation: concat vs concat+product+absdiff on identical embeddings."
+representation:
+  kind: plm
+  plm:
+    model: esm2_t12
+    pooling: mean
+interaction: all
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

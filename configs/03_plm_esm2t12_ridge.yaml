@@ -1,0 +1,16 @@
+name: esm2t12_mean_ridge
+notes: "Frozen ESM2-35M mean-pooled embeddings of peptide and HLA pseudosequence."
+representation:
+  kind: plm
+  plm:
+    model: esm2_t12
+    pooling: mean
+    hla_field: hla_pseudoseq
+interaction: concat
+model:
+  kind: ridge
+  params: {alpha: 10.0}
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

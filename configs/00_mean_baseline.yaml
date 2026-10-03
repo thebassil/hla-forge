@@ -1,0 +1,13 @@
+name: mean_baseline
+notes: "Floor. Predicts the training mean; any model below this is not learning."
+representation:
+  kind: cheap
+  peptide: [composition]
+  hla: [composition]
+interaction: concat
+model:
+  kind: mean
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

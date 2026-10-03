@@ -1,0 +1,14 @@
+name: blosum_ridge
+notes: "Cheapest honest baseline: BLOSUM62 position encoding + ridge."
+representation:
+  kind: cheap
+  peptide: [blosum]
+  hla: [blosum]
+interaction: concat
+model:
+  kind: ridge
+  params: {alpha: 10.0}
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

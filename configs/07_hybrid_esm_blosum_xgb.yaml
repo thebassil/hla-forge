@@ -1,0 +1,16 @@
+name: hybrid_esm2t12_blosum_xgb
+notes: "Does ESM add anything on top of BLOSUM, or is it redundant?"
+representation:
+  kind: hybrid
+  peptide: [blosum, physchem]
+  hla: [blosum]
+  plm:
+    model: esm2_t12
+    pooling: mean
+interaction: concat
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

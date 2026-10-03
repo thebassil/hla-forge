@@ -1,0 +1,14 @@
+name: esm2t12_flatten_xgb
+notes: "Per-residue (unpooled) peptide embeddings: does position-resolved detail matter?"
+representation:
+  kind: plm
+  plm:
+    model: esm2_t12
+    pooling: flatten
+interaction: concat
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0
