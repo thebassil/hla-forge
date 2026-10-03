@@ -92,6 +92,19 @@ about 0.10 on within-allele ranking.
 rows per allele narrows the gap from -0.101 to -0.054. The pretraining prior is worth something
 where supervision runs out; it is never worth enough to win.
 
+**Censoring needs a rank objective, not a censored likelihood.** A fifth of the half-lives are
+exactly zero -- the assay's detection floor rather than a measurement. Training on ranks instead
+of magnitudes gains +0.010 on unseen peptides and +0.027 on unseen alleles, because a rank asks
+only that those rows sort to the bottom, not that they equal zero hours. Modelling the censoring
+explicitly does not help: a hurdle model (classify "did it register" times regress "how long
+given it did") gains +0.004 against a 0.009 fold standard deviation, and its HistGB variant is
+worse than the plain baseline. The simpler fix is the one that works.
+
+Ranking *within* allele instead is the best model on within-allele Spearman (0.654 against
+0.636) while collapsing overall Spearman to 0.562, because it discards the cross-allele scale
+that the overall metric rewards. Train on the ranking you will be scored on -- and for choosing
+peptides for one patient's allele, the within-allele ranking is the one that matters.
+
 **The useful prior is proximity to the task, not corpus size.** A 650M-parameter model trained
 on all of UniRef scores 0.251 where peptide and allele are both unseen. A far smaller model
 trained on peptide-MHC binding scores 0.578 on the same rows, and 0.672 alongside BLOSUM. Three

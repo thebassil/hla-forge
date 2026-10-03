@@ -1,100 +1,88 @@
 {
   "history": [
     {
-      "family": "R6",
-      "name": "R6_affinity_alone",
-      "score": 0.6423047707330112,
+      "family": "R1C",
+      "name": "R1C_reference",
+      "score": 0.7854641340426103,
       "by_split": {
-        "peptide": 0.6423047707330112,
-        "allele": 0.5859672679841081,
-        "strict": 0.5788838228132122
+        "peptide": 0.7854641340426103,
+        "allele": 0.5131005356582248,
+        "strict": 0.5546845650957428
       },
-      "seconds": 39.966224908828735
+      "seconds": 183.97127604484558
     },
     {
-      "family": "R6",
-      "name": "R6_affinity_alone_log1p",
-      "score": 0.6420513503421874,
+      "family": "R1C",
+      "name": "R1C_target_rank",
+      "score": 0.7951345699780542,
       "by_split": {
-        "peptide": 0.6420513503421874,
-        "allele": 0.5827071100374545,
-        "strict": 0.5783996310647399
+        "peptide": 0.7951345699780542,
+        "allele": 0.5399652862038518,
+        "strict": 0.5471297838995246
       },
-      "seconds": 38.962690114974976
+      "seconds": 173.97555899620056
     },
     {
-      "family": "R6",
-      "name": "R6_affinity_plus_R1",
-      "score": 0.8290569482110458,
+      "family": "R1C",
+      "name": "R1C_target_rank_allele",
+      "score": 0.5617278483933292,
       "by_split": {
-        "peptide": 0.8290569482110458,
-        "allele": 0.6666691395839845,
-        "strict": 0.6838503120888039
+        "peptide": 0.5617278483933292,
+        "allele": 0.4425549883190537,
+        "strict": 0.42726565088858326
       },
-      "seconds": 191.47950530052185
+      "seconds": 217.8465280532837
     },
     {
-      "family": "R6",
-      "name": "R6_affinity_plus_R1_log1p",
-      "score": 0.820109076468626,
+      "family": "R1C",
+      "name": "R1C_two_stage",
+      "score": 0.7891370836827363,
       "by_split": {
-        "peptide": 0.820109076468626,
-        "allele": 0.6459923883657822,
-        "strict": 0.6819789529175144
+        "peptide": 0.7891370836827363,
+        "allele": 0.5300669341673598,
+        "strict": 0.5388626971247104
       },
-      "seconds": 181.65561389923096
+      "seconds": 378.7471580505371
     },
     {
-      "family": "R6",
-      "name": "R6_affinity_plus_R1_plus_R4",
-      "score": 0.8256238075277252,
+      "family": "R1C",
+      "name": "R1C_two_stage_hgb",
+      "score": 0.759468379412886,
       "by_split": {
-        "peptide": 0.8256238075277252,
-        "allele": 0.6808504767720359,
-        "strict": 0.6858040320246725
+        "peptide": 0.759468379412886,
+        "allele": 0.49748415619474107,
+        "strict": 0.5184024799785065
       },
-      "seconds": 195.62231492996216
-    },
-    {
-      "family": "R6",
-      "name": "R6_affinity_plus_R2",
-      "score": 0.7353001686937031,
-      "by_split": {
-        "peptide": 0.7353001686937031,
-        "allele": 0.5398762843640385,
-        "strict": 0.5078657977566272
-      },
-      "seconds": 570.1375286579132
+      "seconds": 2087.6777968406677
     }
   ],
   "growth": {
-    "R6": {
-      "n_experiments": 6,
-      "minutes_spent": 20.3,
-      "best": 0.8291,
-      "best_config": "R6_affinity_plus_R1",
-      "gain_total": 0.1868,
-      "gain_per_experiment": 0.0374,
-      "gain_per_hour": 0.5521,
-      "gain_last_5": 0.1868,
+    "R1C": {
+      "n_experiments": 5,
+      "minutes_spent": 50.7,
+      "best": 0.7951,
+      "best_config": "R1C_target_rank",
+      "gain_total": 0.0097,
+      "gain_per_experiment": 0.0024,
+      "gain_per_hour": 0.0114,
+      "gain_last_5": 0.0097,
       "saturating": false,
       "curve": [
-        0.6423,
-        0.6423,
-        0.8291,
-        0.8291,
-        0.8291,
-        0.8291
+        0.7855,
+        0.7951,
+        0.7951,
+        0.7951,
+        0.7951
       ]
     }
   },
   "settings": {
     "families": [
-      "R6"
+      "R1C"
     ],
     "limit": 28166,
     "folds": 5,
-    "max_minutes": 45.0,
+    "max_minutes": 40.0,
     "metric": "spearman"
   }
 }
