@@ -1,0 +1,15 @@
+name: R4_per_allele_plus_R1
+notes: "Per-allele geometry bolted onto the sequence reference."
+representation:
+  kind: cheap
+  peptide: [blosum, physchem]
+  hla: [blosum]
+  structure:
+    per_allele: true
+interaction: concat
+model:
+  kind: xgboost
+target: rank
+splits: [peptide, allele, strict]
+n_splits: 5
+seed: 0

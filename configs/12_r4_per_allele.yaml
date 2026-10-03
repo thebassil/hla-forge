@@ -1,0 +1,16 @@
+name: R4_per_allele
+notes: >
+  ProteinMPNN scored against one ESMFold-predicted groove per allele, instead of threading all
+  75 alleles onto a single crystal template. Tests whether the shared-backbone approximation is
+  what capped the geometry reference at 0.501.
+representation:
+  kind: structure
+  structure:
+    per_allele: true
+interaction: concat
+model:
+  kind: xgboost
+target: rank
+splits: [peptide, allele, strict]
+n_splits: 5
+seed: 0

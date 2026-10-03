@@ -127,6 +127,23 @@ not depend on having used the model lazily: frozen or trained, the substitution 
 **Zero-shot sequence likelihood is dead.** ESM2's masked-LM score for a peptide inside its
 groove correlates 0.087 with half-life. Thermodynamic plausibility is not kinetic stability.
 
+**A measured structure beats a predicted one, even of the wrong allele.** The geometry reference
+threads all 75 alleles onto a single crystal template, which is an obvious thing to criticise --
+so we fixed it. ESMFold predicted one groove per allele (75 folds, not 28,166), each superposed
+into the template frame on the helices that wall the binding site. It got *worse*:
+
+| | unseen peptide | unseen allele | both unseen |
+|---|---|---|---|
+| ProteinMPNN, one crystal template | 0.501 | **0.363** | **0.308** |
+| ProteinMPNN, 75 predicted grooves | 0.473 | 0.240 | 0.197 |
+
+Zero-shot the same thing happens, and the two score sets correlate 0.84, so the backbones really
+do differ -- this is not a no-op. The drop is largest on the unseen-allele split, which is
+exactly the axis per-allele structures were supposed to help. The reason is that ESMFold
+predicts a groove *from its sequence*, so for a novel allele it contributes nothing the sequence
+encoding did not already carry, and adds prediction error on top. A 2.6-billion-parameter
+structure predictor folding the right allele loses to one crystal structure of the wrong one.
+
 **Geometry is efficient and interpretable, but redundant.** Thirteen ProteinMPNN features beat
 12,800 ESM dimensions on both hard splits. Zero-shot, the per-position correlations are highest at P2
 (+0.104), P4 (+0.079) and P9 (+0.059), and are negative only at P6 (-0.011) and P7 (-0.014).
