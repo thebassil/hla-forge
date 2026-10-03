@@ -129,7 +129,7 @@ def build_features(df: pd.DataFrame, cfg: ExperimentConfig) -> np.ndarray:
     rep = cfg.representation
     blocks: list[np.ndarray] = []
 
-    if rep.get("kind", "cheap") not in ("likelihood", "structure"):
+    if rep.get("kind", "cheap") not in ("likelihood", "structure", "affinity"):
         pep, hla = build_sides(df, rep)
         blocks.append(combine(pep, hla, cfg.interaction))
 
@@ -148,20 +148,59 @@ def build_features(df: pd.DataFrame, cfg: ExperimentConfig) -> np.ndarray:
 
         blocks.append(score_structure(df, **dict(struct or {})))
 
+    # R6: binding-affinity predictions as a transfer signal.
+    aff = rep.get("affinity")
+    if aff is not None or rep.get("kind") == "affinity":
+        from .affinity import predict_affinity
+
+        blocks.append(predict_affinity(df, **dict(aff or {})))
+
     if not blocks:
         raise ValueError("representation produced no features")
     X = blocks[0] if len(blocks) == 1 else np.concatenate(blocks, axis=1)
     return np.ascontiguousarray(X, dtype=np.float32)
 
 
+RANK_TARGETS = ("rank", "rank_allele")
+
+
 def _target(df: pd.DataFrame, target: str) -> np.ndarray:
-    if target == "log1p":
+    if target in ("log1p", *RANK_TARGETS):
+        # Rank targets are derived per fold from the training rows only; this is the
+        # underlying value they are derived from, and the value everything is scored against.
         return df["y"].to_numpy(dtype=np.float32)
     if target == "raw":
         return df["thalf_hours"].to_numpy(dtype=np.float32)
     if target == "binary":
         return df["y_binary"].to_numpy(dtype=np.float32)
     raise ValueError(f"unknown target '{target}'")
+
+
+def _fit_target(
+    y: np.ndarray, train_idx: np.ndarray, alleles: np.ndarray, target: str
+) -> np.ndarray:
+    """Training targets for one fold.
+
+    Spearman is a rank statistic, so training on ranks optimises what we actually measure, and
+    it sidesteps the censored rows entirely: every below-detection row simply shares the bottom
+    rank instead of asserting a half-life of zero hours. The transform is computed on the
+    training fold alone -- a rank depends on every other row, so deriving it over the full
+    dataset would leak the test set's targets into training.
+    """
+    from scipy.stats import rankdata
+
+    y_tr = y[train_idx]
+    if target not in RANK_TARGETS:
+        return y_tr
+    if target == "rank":
+        return (rankdata(y_tr) / len(y_tr)).astype(np.float32)
+
+    out = np.empty(len(y_tr), dtype=np.float32)
+    tr_alleles = alleles[train_idx]
+    for allele in np.unique(tr_alleles):
+        m = tr_alleles == allele
+        out[m] = rankdata(y_tr[m]) / m.sum()
+    return out
 
 
 def run_experiment(
@@ -187,7 +226,7 @@ def run_experiment(
                 cfg.seed,
                 reduce=cfg.model.get("reduce"),
             )
-            model.fit(X[train_idx], y[train_idx])
+            model.fit(X[train_idx], _fit_target(y, train_idx, alleles, cfg.target))
             pred = np.asarray(model.predict(X[test_idx]), dtype=float)
             fold_metrics.append(
                 compute_metrics(

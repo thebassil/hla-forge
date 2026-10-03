@@ -79,7 +79,67 @@ def _build_estimator(kind: str, params: dict[str, Any] | None = None, seed: int 
         )
     if kind == "mean":
         return _MeanBaseline()
+    if kind.startswith("two_stage"):
+        inner = kind.split(":", 1)[1] if ":" in kind else "xgboost"
+        reg = _build_estimator(inner, params, seed)
+        clf = _build_classifier(inner, params, seed)
+        return TwoStageRegressor(clf, reg)
     raise ValueError(f"unknown model kind '{kind}'")
+
+
+def _build_classifier(kind: str, params: dict[str, Any] | None, seed: int):
+    params = dict(params or {})
+    if kind == "xgboost":
+        from xgboost import XGBClassifier
+
+        defaults = dict(
+            n_estimators=400, max_depth=6, learning_rate=0.08, subsample=0.8,
+            colsample_bytree=0.6, n_jobs=-1, tree_method="hist", random_state=seed,
+        )
+        return XGBClassifier(**{**defaults, **params})
+    if kind == "hgb":
+        from sklearn.ensemble import HistGradientBoostingClassifier
+
+        return HistGradientBoostingClassifier(
+            **{"max_iter": 300, "learning_rate": 0.08, "random_state": seed, **params}
+        )
+    from sklearn.linear_model import LogisticRegression
+
+    return Pipeline([("scale", StandardScaler()),
+                     ("est", LogisticRegression(max_iter=1000, **params))])
+
+
+class TwoStageRegressor:
+    """Hurdle model for a left-censored target.
+
+    5,679 of the 28,166 half-lives are exactly 0.0 -- that is the assay reporting "below
+    detection", not a measurement of zero hours. Regressing on them as if they were real zeros
+    asks the model to fit a number that does not exist. This instead fits a classifier for
+    "did this complex register at all" and a regressor for "given that it did, how long", then
+    multiplies. The product is a sensible ranking score across both regimes.
+    """
+
+    def __init__(self, clf, reg):
+        self.clf = clf
+        self.reg = reg
+
+    def fit(self, X, y):
+        detected = (np.asarray(y) > 0).astype(int)
+        self.clf.fit(X, detected)
+        if detected.sum() >= 10 and detected.sum() < len(detected):
+            self.reg.fit(X[detected == 1], np.asarray(y)[detected == 1])
+            self._degenerate = False
+        else:
+            self.reg.fit(X, y)
+            self._degenerate = True
+        return self
+
+    def predict(self, X):
+        magnitude = self.reg.predict(X)
+        if self._degenerate:
+            return magnitude
+        p = self.clf.predict_proba(X)[:, 1]
+        return p * magnitude
 
 
 class _MeanBaseline:

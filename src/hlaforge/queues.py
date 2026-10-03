@@ -185,3 +185,66 @@ def queue_r4() -> list[tuple[str, dict]]:
 
 
 QUEUES["R4"] = queue_r4
+
+
+def queue_r1c() -> list[tuple[str, dict]]:
+    """R1 with the censoring handled, and with the metric actually optimised.
+
+    Two things the whole project has been getting wrong. First, 20% of half-lives are exactly
+    zero, which is the assay's detection floor rather than a measurement -- squared error on
+    those rows asks the model to fit a number that does not exist. Second, every model has been
+    trained on squared error while being scored on Spearman, a rank statistic.
+    """
+    rep = {"kind": "cheap", "peptide": ["blosum", "physchem"], "hla": ["blosum"]}
+    base = dict(representation=rep, interaction="concat",
+                model={"kind": "xgboost"}, target="log1p")
+
+    out: list[tuple[str, dict]] = [("R1C_reference", base)]
+    # train on ranks instead of magnitudes
+    out.append(("R1C_target_rank", {**base, "target": "rank"}))
+    out.append(("R1C_target_rank_allele", {**base, "target": "rank_allele"}))
+    # hurdle: model "did it register at all" separately from "how long"
+    out.append(("R1C_two_stage", {**base, "model": {"kind": "two_stage:xgboost"}}))
+    out.append(("R1C_two_stage_hgb", {**base, "model": {"kind": "two_stage:hgb"}}))
+    # both together
+    out.append(("R1C_two_stage_rank",
+                {**base, "model": {"kind": "two_stage:xgboost"}, "target": "rank"}))
+    return out
+
+
+QUEUES["R1C"] = queue_r1c
+
+
+def queue_r6() -> list[tuple[str, dict]]:
+    """R6: binding affinity as a transfer signal, in the cheapest possible form.
+
+    MINT gets +0.18 Spearman for ESM-2 from a binding-affinity-to-stability curriculum, and
+    TLStab found that handing a model a binding-affinity prediction as a feature was often as
+    good as the full transfer pipeline. This tests the feature version: MHCflurry's outputs
+    alone, then bolted onto the sequence reference, then with geometry too.
+    """
+    cheap = {"kind": "cheap", "peptide": ["blosum", "physchem"], "hla": ["blosum"]}
+    base = dict(representation={"kind": "affinity"}, interaction="concat",
+                model={"kind": "xgboost"}, target="rank")
+
+    out: list[tuple[str, dict]] = [("R6_affinity_alone", base)]
+    out.append(("R6_affinity_alone_log1p", {**base, "target": "log1p"}))
+    # the one that matters: does it add to the best sequence model?
+    out.append(("R6_affinity_plus_R1",
+                {**base, "representation": {**cheap, "affinity": {}}}))
+    out.append(("R6_affinity_plus_R1_log1p",
+                {**base, "representation": {**cheap, "affinity": {}}, "target": "log1p"}))
+    # everything at once: sequence + affinity + geometry
+    out.append(("R6_affinity_plus_R1_plus_R4",
+                {**base, "representation": {**cheap, "affinity": {}, "structure": {}}}))
+    # and affinity with the frozen PLM, to see whether transfer rescues it
+    out.append(("R6_affinity_plus_R2",
+                {**base,
+                 "representation": {"kind": "plm", "plm": {"model": "esm2_t12",
+                                                           "pooling": "flatten"},
+                                    "affinity": {}},
+                 "model": {"kind": "xgboost", "reduce": 256}}))
+    return out
+
+
+QUEUES["R6"] = queue_r6
