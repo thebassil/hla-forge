@@ -198,6 +198,35 @@ def _curve_remote(folds: int, seed: int, arms: str = "", caps: str = "") -> dict
             "returncode": out.returncode}
 
 
+@app.function(image=image, gpu="A10G", timeout=21600, volumes=VOLUMES)
+def _finetune_remote(model: str, splits: str, folds: int, epochs: int, lora_rank: int,
+                     batch_size: int, lr: float, limit: int) -> dict:
+    """R5: gradients into the encoder. The frozen-embedding result is only half an argument."""
+    import subprocess
+
+    _chdir()
+    cmd = ["python", "/root/scripts/run_finetune.py", "--model", model,
+           "--splits", *splits.split(","), "--folds", str(folds), "--epochs", str(epochs),
+           "--lora-rank", str(lora_rank), "--batch-size", str(batch_size), "--lr", str(lr)]
+    if limit:
+        cmd += ["--limit", str(limit)]
+    out = subprocess.run(cmd, capture_output=True, text=True)
+    artifacts.commit()
+    hf_cache.commit()
+    return {"stdout": out.stdout[-12000:], "stderr": out.stderr[-4000:],
+            "returncode": out.returncode}
+
+
+@app.local_entrypoint()
+def finetune(model: str = "esm2_t12", splits: str = "peptide,allele,strict", folds: int = 3,
+             epochs: int = 4, lora_rank: int = 0, batch_size: int = 64, lr: float = 3e-5,
+             limit: int = 0):
+    res = _finetune_remote.remote(model, splits, folds, epochs, lora_rank, batch_size, lr, limit)
+    print(res["stdout"])
+    if res["returncode"] != 0:
+        print("STDERR:", res["stderr"])
+
+
 @app.local_entrypoint()
 def mpnn(weights: str = "v_48_020", orders: int = 4, batch_size: int = 64, limit: int = 0):
     n = _mpnn_remote.remote(weights, orders, batch_size, limit or None)

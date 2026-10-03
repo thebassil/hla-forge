@@ -76,6 +76,78 @@ def overall_vs_per_allele(df) -> None:
     print(f"-> {OUT / 'overall_vs_per_allele.png'}")
 
 
+
+
+def anchor_positions(out_dir: Path = OUT) -> None:
+    """Zero-shot ProteinMPNN ranks peptide positions roughly by how buried they are.
+
+    Per-position Spearman between the inverse-folding log-probability of each peptide residue
+    and the measured half-life, with no training of any kind. P2 leads and P9 is elevated --
+    the canonical anchors in the B and F pockets -- along with P4, a secondary anchor in several
+    alleles. The only negative bars are P6 and P7, which point out of the groove toward solvent.
+    """
+    import numpy as np
+    from scipy.stats import spearmanr
+
+    from hlaforge.data import load_raw
+    from hlaforge.structure import FEATURE_NAMES, score_structure
+
+    df = load_raw()
+    feat = score_structure(df)
+    y = df["y"].to_numpy()
+    rhos = [spearmanr(y, feat[:, i]).statistic for i in range(9)]
+
+    anchors = {1, 8}  # zero-indexed P2 and P9, the canonical B- and F-pocket anchors
+    colours = ["#c0392b" if i in anchors else "#95a5a6" for i in range(9)]
+
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    ax.bar(range(1, 10), rhos, color=colours, edgecolor="none")
+    ax.axhline(0, color="black", linewidth=0.8)
+    ax.set_xticks(range(1, 10))
+    ax.set_xticklabels([f"P{i}" for i in range(1, 10)])
+    ax.set_xlabel("peptide position")
+    ax.set_ylabel(r"Spearman $\rho$ with measured half-life")
+    for i in anchors:
+        ax.annotate("anchor", (i + 1, rhos[i]), textcoords="offset points", xytext=(0, 4),
+                    ha="center", fontsize=8, color="#c0392b")
+    ax.grid(axis="y", alpha=0.25)
+    ax.set_axisbelow(True)
+    fig.tight_layout()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / "mpnn_anchor_positions.png", dpi=200)
+    print(f"-> {out_dir / 'mpnn_anchor_positions.png'}")
+
+
+def scaling_curve(df, out_dir: Path = OUT) -> None:
+    """87x the parameters, +0.023. Plotted against the baseline it has to beat."""
+    import numpy as np
+
+    sizes = {"esm2_t6_mean_xgb_svd": 7.5, "esm2_t12_mean_xgb_svd": 33.5,
+             "esm2_t30_mean_xgb_svd": 148.1, "esm2_t33_mean_xgb_svd": 651.0}
+    sub = df[df["name"].isin(sizes) & (df["split"] == "peptide")].copy()
+    if sub.empty:
+        return
+    sub["params"] = sub["name"].map(sizes)
+    sub = sub.sort_values("params")
+
+    ref = df[(df["name"] == "blosum_xgb") & (df["split"] == "peptide")]["spearman"]
+    fig, ax = plt.subplots(figsize=(6.4, 4.0))
+    ax.semilogx(sub["params"], sub["spearman"], marker="o", linewidth=2,
+                color="#2980b9", label="ESM2 (frozen, mean-pooled)")
+    if not ref.empty:
+        ax.axhline(float(ref.iloc[0]), color="#c0392b", linestyle="--", linewidth=2,
+                   label="BLOSUM62 + XGBoost")
+    ax.set_xlabel("ESM2 parameters (millions, log scale)")
+    ax.set_ylabel(r"Spearman $\rho$, unseen peptides")
+    ax.set_ylim(0, 0.9)
+    ax.grid(alpha=0.25)
+    ax.legend(frameon=False, fontsize=9)
+    fig.tight_layout()
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / "scaling_curve.png", dpi=200)
+    print(f"-> {out_dir / 'scaling_curve.png'}")
+
+
 if __name__ == "__main__":
     results = load_results()
     if results.empty:
@@ -84,3 +156,8 @@ if __name__ == "__main__":
     split_ladder(results, "spearman")
     split_ladder(results, "spearman_per_allele_mean")
     overall_vs_per_allele(results)
+    scaling_curve(results)
+    try:
+        anchor_positions()
+    except FileNotFoundError as exc:
+        print(f"skipping anchor figure: {exc}")

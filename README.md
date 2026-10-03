@@ -68,10 +68,13 @@ where supervision runs out; it is never worth enough to win.
 groove correlates 0.087 with half-life. Thermodynamic plausibility is not kinetic stability.
 
 **Geometry is efficient and interpretable, but redundant.** Thirteen ProteinMPNN features beat
-12,800 ESM dimensions on both hard splits. Zero-shot, the per-position correlations peak at P2
-(+0.104) and P9 (+0.059) — the canonical anchor residues in the B and F pockets — and go flat
-across the solvent-exposed middle (P6 -0.011, P7 -0.014). A model that never saw an immunology
-dataset recovered the anchor architecture of antigen presentation from backbone geometry. But
+12,800 ESM dimensions on both hard splits. Zero-shot, the per-position correlations are highest at P2
+(+0.104), P4 (+0.079) and P9 (+0.059), and are negative only at P6 (-0.011) and P7 (-0.014).
+P2 and P9 are the canonical anchor residues that sit in the B and F pockets; P4 is a secondary
+anchor in several alleles; P6 and P7 point out of the groove toward solvent. So a model that
+never saw an immunology dataset ranks the positions roughly by how buried they are. The signal
+is weak in absolute terms -- the strongest single position is 0.10 -- but the ordering is
+right. But
 bolted onto BLOSUM it adds +0.023 on the allele split against a 0.12 noise floor: the
 information is already there in the sequence encoding.
 
