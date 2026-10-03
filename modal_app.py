@@ -27,8 +27,13 @@ DEPS = [
 image = (
     modal.Image.debian_slim(python_version="3.12")
     .pip_install(*DEPS)
+    .apt_install("git")
     .env({"PYTHONPATH": "/root/src", "HF_HOME": "/cache/hf"})
+    .run_commands("git clone --depth 1 https://github.com/dauparas/ProteinMPNN "
+                  "/root/external/ProteinMPNN")
     .add_local_dir("src", remote_path="/root/src")
+    .add_local_dir("scripts", remote_path="/root/scripts")
+    .add_local_dir("data/template", remote_path="/root/data/template")
     .add_local_file("data/raw/rasmussen_stability.csv", "/root/data/raw/rasmussen_stability.csv")
 )
 
@@ -156,6 +161,54 @@ def queue(
                       "splits": split_list}},
         indent=2, default=float))
     print(f"-> {out}\n   summarise with: python scripts/growth_report.py {out}")
+
+
+@app.function(image=image, gpu="A10G", timeout=14400, volumes=VOLUMES)
+def _mpnn_remote(weights: str, orders: int, batch_size: int, limit: int | None) -> int:
+    """R4: inverse-folding scores. 1.8 rows/s on a laptop CPU, far faster here."""
+    _chdir()
+    from hlaforge.data import load_raw
+    from hlaforge.structure import score_structure
+
+    df = load_raw(limit=limit)
+    mat = score_structure(
+        df, weights=weights, n_decoding_orders=orders,
+        batch_size=batch_size, device="cuda",
+    )
+    artifacts.commit()
+    return int(mat.shape[0])
+
+
+@app.function(image=image, cpu=16.0, memory=65536, timeout=7200, volumes=VOLUMES)
+def _curve_remote(folds: int, seed: int) -> dict:
+    """The data-starvation crossover curve. Needs a big box: the 650M flattened
+    representation is 12,800 columns over 28,166 rows and OOMs a 24GB laptop."""
+    import subprocess
+
+    _chdir()
+    out = subprocess.run(
+        ["python", "/root/scripts/data_curve.py", "--folds", str(folds),
+         "--seed", str(seed)],
+        capture_output=True, text=True,
+    )
+    artifacts.commit()
+    return {"stdout": out.stdout[-8000:], "stderr": out.stderr[-3000:],
+            "returncode": out.returncode}
+
+
+@app.local_entrypoint()
+def mpnn(weights: str = "v_48_020", orders: int = 4, batch_size: int = 64, limit: int = 0):
+    n = _mpnn_remote.remote(weights, orders, batch_size, limit or None)
+    print(f"scored {n} peptide-groove pairs with ProteinMPNN/{weights}")
+    print("pull locally: modal volume get hlaforge-artifacts /embeddings artifacts/")
+
+
+@app.local_entrypoint()
+def curve(folds: int = 3, seed: int = 0):
+    res = _curve_remote.remote(folds, seed)
+    print(res["stdout"])
+    if res["returncode"] != 0:
+        print("STDERR:", res["stderr"])
 
 
 @app.local_entrypoint()

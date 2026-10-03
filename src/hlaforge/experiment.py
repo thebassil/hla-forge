@@ -77,14 +77,19 @@ def build_sides(df: pd.DataFrame, rep: dict[str, Any]) -> tuple[np.ndarray, np.n
         plm = rep.get("plm", {})
         kw = dict(
             model=plm.get("model", "esm2_t12"),
-            pooling=plm.get("pooling", "mean"),
             hla_field=plm.get("hla_field", "hla_pseudoseq"),
             layer=plm.get("layer", -1),
             batch_size=plm.get("batch_size", 64),
             device=plm.get("device"),
         )
-        pep = encode_side_plm(df, "peptide", **kw)
-        hla = encode_side_plm(df, "hla", **kw)
+        # Pooling can differ per side. Flattening a 9-mer costs 9 x D columns, but flattening a
+        # 34-residue pseudosequence costs 34 x D -- so the useful setting is often "keep the
+        # peptide position-resolved, pool the groove".
+        default_pool = plm.get("pooling", "mean")
+        pep = encode_side_plm(
+            df, "peptide", pooling=plm.get("pooling_peptide", default_pool), **kw
+        )
+        hla = encode_side_plm(df, "hla", pooling=plm.get("pooling_hla", default_pool), **kw)
         if kind == "hybrid":
             pep = np.concatenate(
                 [pep, cheap.encode_side(df, "peptide", rep.get("peptide", ["blosum"]))], axis=1

@@ -95,6 +95,56 @@ def queue_r3() -> list[tuple[str, dict]]:
 
 QUEUES = {"R1": queue_r1, "R2": queue_r2, "R3": queue_r3}
 
+def queue_r2f() -> list[tuple[str, dict]]:
+    """R2-flatten: chase the one axis that actually moved the embedding reference.
+
+    Mean-pooling a 9-mer throws away position, which is exactly the information a substitution
+    matrix keeps. Turning pooling off bought +0.105 in the first round -- more than 87x of model
+    scale did. This family pushes on that until it stops giving.
+    """
+    def rep(model="esm2_t12", pep_pool="flatten", hla_pool="mean", layer=-1):
+        return {"kind": "plm", "plm": {"model": model, "pooling_peptide": pep_pool,
+                                       "pooling_hla": hla_pool, "layer": layer}}
+
+    base = dict(
+        representation=rep(),
+        interaction="concat",
+        model={"kind": "xgboost", "reduce": 256},
+        target="log1p",
+    )
+    out: list[tuple[str, dict]] = [("R2F_reference", base)]
+
+    # scale, now with the pooling fixed
+    for m in ["esm2_t6", "esm2_t30", "esm2_t33"]:
+        out.append((f"R2F_size_{m}", {**base, "representation": rep(model=m)}))
+    # flatten both sides, not just the peptide
+    out.append(("R2F_bothflat", {**base, "representation": rep(hla_pool="flatten")}))
+    out.append(("R2F_bothflat_t33",
+                {**base, "representation": rep(model="esm2_t33", hla_pool="flatten")}))
+    # how much reduction can it take
+    for r in [None, 512, 128]:
+        out.append((f"R2F_reduce_{r}", {**base, "model": {"kind": "xgboost", "reduce": r}}))
+    # earlier layers often hold more local, position-specific signal
+    for layer in [-2, -4, -6]:
+        out.append((f"R2F_layer_{layer}", {**base, "representation": rep(layer=layer)}))
+    # predictors
+    for kind in ["hgb", "ridge"]:
+        out.append((f"R2F_pred_{kind}", {**base, "model": {"kind": kind, "reduce": 256}}))
+    # and the honest question: flattened ESM bolted onto the sequence reference
+    out.append(
+        ("R2F_plus_blosum",
+         {**base,
+          "representation": {"kind": "hybrid", "peptide": ["blosum", "physchem"],
+                             "hla": ["blosum"],
+                             "plm": {"model": "esm2_t12", "pooling_peptide": "flatten",
+                                     "pooling_hla": "mean"}}})
+    )
+    return out
+
+
+QUEUES["R2F"] = queue_r2f
+
+
 
 def all_jobs(families: list[str] | None = None) -> list[tuple[str, str, dict]]:
     """Flatten the selected families into (family, name, spec) triples."""
