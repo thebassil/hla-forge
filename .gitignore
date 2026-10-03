@@ -8,3 +8,4 @@ data/processed/*
 !data/processed/.gitkeep
 .specstory/
 .DS_Store
+external/
