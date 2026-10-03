@@ -1,0 +1,15 @@
+name: esm2_t6_mean_xgb_svd
+notes: "Model-size ablation. SVD-256 fit per training fold to keep the tree ensemble affordable."
+representation:
+  kind: plm
+  plm:
+    model: esm2_t6
+    pooling: mean
+interaction: concat
+model:
+  kind: xgboost
+  reduce: 256
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

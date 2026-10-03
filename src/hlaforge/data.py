@@ -74,14 +74,17 @@ def load_raw(path: str | Path = DEFAULT_RAW, limit: int | None = None) -> pd.Dat
     df["y_binary"] = (df["thalf_hours"] >= STABILITY_THRESHOLD_HOURS).astype(int)
     df["censored"] = (df["thalf_hours"] == 0.0).astype(int)
 
-    if limit is not None:
-        # Stratify the subsample by allele so small smoke runs still see many alleles.
-        df = (
-            df.groupby("allele", group_keys=False, sort=False)
-            .apply(lambda g: g.head(max(1, limit // df["allele"].nunique())), include_groups=True)
-            .head(limit)
-            .reset_index(drop=True)
-        )
+    if limit is not None and limit < len(df):
+        # Stratify the subsample by allele so small runs still see many alleles, then top up
+        # with whatever is left so the row count actually reaches the requested limit.
+        per_allele = max(1, limit // df["allele"].nunique())
+        picked = df.groupby("allele", sort=False).head(per_allele)
+        if len(picked) > limit:
+            picked = picked.head(limit)
+        elif len(picked) < limit:
+            rest = df.drop(index=picked.index)
+            picked = pd.concat([picked, rest.head(limit - len(picked))])
+        df = picked.sort_index()
     return df.reset_index(drop=True)
 
 

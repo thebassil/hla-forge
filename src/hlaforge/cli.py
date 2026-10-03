@@ -161,5 +161,56 @@ def report(
     console.print(table)
 
 
+@app.command("delta")
+def delta(
+    reference: str = typer.Option("blosum_xgb", "--ref", help="experiment name to measure against"),
+    metric: str = typer.Option("spearman", "--metric"),
+    results_dir: str = typer.Option("artifacts/results", "--dir"),
+) -> None:
+    """Signed change from the reference system, one row per single-slot swap.
+
+    This is the additive design: hold the reference fixed, change exactly one component, and
+    report the delta. A combinatorial sweep of the same space is 159 days of compute
+    (scripts/ablation_budget.py); this is hours, and it is the only version where a difference
+    is attributable to the component that was swapped.
+    """
+    df = load_results(results_dir)
+    if df.empty:
+        console.print("[yellow]no results yet[/yellow]")
+        raise typer.Exit()
+    df = df.sort_values("file").drop_duplicates(["name", "split"], keep="last")
+
+    ref = df[df["name"] == reference]
+    if ref.empty:
+        console.print(f"[red]reference '{reference}' not found[/red]. Have: "
+                      f"{sorted(df['name'].unique())}")
+        raise typer.Exit(1)
+    ref_by_split = ref.set_index("split")[metric].to_dict()
+
+    splits = [s for s in ["random", "peptide", "peptide_cluster", "allele", "strict"]
+              if s in ref_by_split]
+    table = Table(title=f"delta {metric} vs reference '{reference}' (positive = better)")
+    table.add_column("system")
+    for sp in splits:
+        table.add_column(sp, justify="right")
+
+    for name, grp in df.groupby("name"):
+        by_split = grp.set_index("split")[metric].to_dict()
+        cells = []
+        for sp in splits:
+            if sp not in by_split:
+                cells.append("—")
+                continue
+            if name == reference:
+                cells.append(f"[bold]{by_split[sp]:.3f}[/bold]")
+                continue
+            d = by_split[sp] - ref_by_split[sp]
+            colour = "green" if d > 0.01 else ("red" if d < -0.01 else "white")
+            cells.append(f"[{colour}]{d:+.3f}[/{colour}]")
+        table.add_row(name, *cells)
+    console.print(table)
+    console.print(f"[dim]reference row shows absolute {metric}; all others are deltas[/dim]")
+
+
 if __name__ == "__main__":
     app()
