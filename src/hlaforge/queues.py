@@ -227,8 +227,8 @@ def queue_r6() -> list[tuple[str, dict]]:
     base = dict(representation={"kind": "affinity"}, interaction="concat",
                 model={"kind": "xgboost"}, target="rank")
 
-    out: list[tuple[str, dict]] = [("R6_affinity_alone", base)]
-    out.append(("R6_affinity_alone_log1p", {**base, "target": "log1p"}))
+    out: list[tuple[str, dict]] = [("R6_reference", base)]
+    out.append(("R6_reference_log1p", {**base, "target": "log1p"}))
     # the one that matters: does it add to the best sequence model?
     out.append(("R6_affinity_plus_R1",
                 {**base, "representation": {**cheap, "affinity": {}}}))
