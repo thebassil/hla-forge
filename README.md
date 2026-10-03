@@ -31,6 +31,50 @@ peptides in this dataset was assayed against up to 36 different alleles, so row-
 is not a held-out evaluation at all. Any number reported on a random split is close to
 meaningless, and that is the first thing this harness makes visible.
 
+## Results
+
+Full dataset (28,166 rows), 5 folds, Spearman. The reference is NetMHCstabpan's own
+architecture, retrained under these splits because the released tool saw all of this data.
+
+| system | features | unseen peptide | unseen allele | both unseen |
+|---|---|---|---|---|
+| `netmhcstabpan_arch` (reference) | 908 | 0.745 | 0.474 | 0.461 |
+| **`blosum_xgb`** (predictor swap) | 908 | **0.785** | 0.513 | **0.555** |
+| `R4_plus_R1` (+ geometry) | 921 | 0.782 | 0.536 | 0.558 |
+| `R4_reference` (geometry alone) | **13** | 0.501 | 0.363 | 0.308 |
+| `esm2_t33_mean_xgb` (650M PLM) | 12,800 | 0.597 | 0.321 | 0.251 |
+| `esm2t12_zeroshot_likelihood` | 14 | 0.117 | — | — |
+
+Fold-to-fold standard deviation is ~0.01 on the peptide split, ~0.03 on strict, and **~0.12 on
+the allele split** — so allele-split differences below about 0.1 are not differences.
+
+### What the ablations say
+
+**Swapping the predictor is the only real win.** Trees instead of the incumbent's small neural
+net: +0.040 on unseen peptides, +0.093 on the hardest split. No foundation model involved.
+
+**Language models lose at every scale, and only improve by becoming BLOSUM.** Going from 7.5M
+to 650M parameters buys +0.023. What actually helps is turning pooling off (+0.221) and
+dropping dimensionality reduction (+0.040) — that is, making the embedding more
+position-specific and less compressed, which is precisely what a substitution matrix already
+is. It converges toward BLOSUM from below and stops. Properly configured it still trails by
+about 0.10 on within-allele ranking.
+
+**The deficit shrinks when labels are scarce, but never reverses.** Capping training data at 10
+rows per allele narrows the gap from -0.101 to -0.054. The pretraining prior is worth something
+where supervision runs out; it is never worth enough to win.
+
+**Zero-shot sequence likelihood is dead.** ESM2's masked-LM score for a peptide inside its
+groove correlates 0.087 with half-life. Thermodynamic plausibility is not kinetic stability.
+
+**Geometry is efficient and interpretable, but redundant.** Thirteen ProteinMPNN features beat
+12,800 ESM dimensions on both hard splits. Zero-shot, the per-position correlations peak at P2
+(+0.104) and P9 (+0.059) — the canonical anchor residues in the B and F pockets — and go flat
+across the solvent-exposed middle (P6 -0.011, P7 -0.014). A model that never saw an immunology
+dataset recovered the anchor architecture of antigen presentation from backbone geometry. But
+bolted onto BLOSUM it adds +0.023 on the allele split against a 0.12 noise floor: the
+information is already there in the sequence encoding.
+
 ## Dataset
 
 `data/raw/rasmussen_stability.csv` — Rasmussen et al. (2016), 28,166 peptide-HLA half-life

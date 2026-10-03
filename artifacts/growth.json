@@ -1,54 +1,88 @@
 {
   "history": [
     {
-      "family": "R1",
-      "name": "R1_reference",
-      "score": 0.6716043451360499,
+      "family": "R4",
+      "name": "R4_reference",
+      "score": 0.5005359591963161,
       "by_split": {
-        "peptide": 0.6716043451360499,
-        "allele": 0.4624808490587354,
-        "strict": 0.3130570460856325
+        "peptide": 0.5005359591963161,
+        "allele": 0.3631730065334816,
+        "strict": 0.30799162242382294
       },
-      "seconds": 38.44612097740173
+      "seconds": 21.8304340839386
     },
     {
-      "family": "R1",
-      "name": "R1_pred_ridge",
-      "score": 0.5694027669720029,
+      "family": "R4",
+      "name": "R4_pred_ridge",
+      "score": 0.22902971027028052,
       "by_split": {
-        "peptide": 0.5694027669720029,
-        "allele": 0.36228103978428017,
-        "strict": 0.13997721526136012
+        "peptide": 0.22902971027028052,
+        "allele": 0.19597053372555956,
+        "strict": 0.175217716093153
       },
-      "seconds": 21.104825019836426
+      "seconds": 2.093618869781494
+    },
+    {
+      "family": "R4",
+      "name": "R4_pred_hgb",
+      "score": 0.501349658084397,
+      "by_split": {
+        "peptide": 0.501349658084397,
+        "allele": 0.3486261884952529,
+        "strict": 0.3073155275087712
+      },
+      "seconds": 84.53027200698853
+    },
+    {
+      "family": "R4",
+      "name": "R4_plus_R1",
+      "score": 0.7824813912998503,
+      "by_split": {
+        "peptide": 0.7824813912998503,
+        "allele": 0.5358350962372322,
+        "strict": 0.5576362544974748
+      },
+      "seconds": 314.6688358783722
+    },
+    {
+      "family": "R4",
+      "name": "R4_plus_R1_plus_R3",
+      "score": 0.7779688066813304,
+      "by_split": {
+        "peptide": 0.7779688066813304,
+        "allele": 0.5328458113884984,
+        "strict": 0.5511167309836399
+      },
+      "seconds": 759.037134885788
     }
   ],
   "growth": {
-    "R1": {
-      "n_experiments": 2,
-      "minutes_spent": 1.0,
-      "best": 0.6716,
-      "best_config": "R1_reference",
-      "gain_total": 0.0,
-      "gain_per_experiment": 0.0,
-      "gain_per_hour": 0.0,
-      "gain_last_5": 0.0,
+    "R4": {
+      "n_experiments": 5,
+      "minutes_spent": 19.7,
+      "best": 0.7825,
+      "best_config": "R4_plus_R1",
+      "gain_total": 0.2819,
+      "gain_per_experiment": 0.0705,
+      "gain_per_hour": 0.8586,
+      "gain_last_5": 0.2819,
       "saturating": false,
       "curve": [
-        0.6716,
-        0.6716
+        0.5005,
+        0.5005,
+        0.5013,
+        0.7825,
+        0.7825
       ]
     }
   },
   "settings": {
     "families": [
-      "R1",
-      "R2",
-      "R3"
+      "R4"
     ],
-    "limit": 10000,
-    "folds": 3,
-    "max_minutes": 100.0,
+    "limit": 28166,
+    "folds": 5,
+    "max_minutes": 30.0,
     "metric": "spearman"
   }
 }
