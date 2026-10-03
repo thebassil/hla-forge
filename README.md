@@ -44,6 +44,7 @@ architecture, retrained under these splits because the released tool saw all of 
 | `R4_reference` (geometry alone) | **13** | 0.501 | 0.363 | 0.308 |
 | `esm2_t33_mean_xgb` (650M PLM) | 12,800 | 0.597 | 0.321 | 0.251 |
 | `esm2t12_zeroshot_likelihood` | 14 | 0.117 | — | — |
+| `R5_finetune_esm2_t12_full` | 35M params | 0.644 | 0.376 | 0.359 |
 
 Fold-to-fold standard deviation is ~0.01 on the peptide split, ~0.03 on strict, and **~0.12 on
 the allele split** — so allele-split differences below about 0.1 are not differences.
@@ -63,6 +64,11 @@ about 0.10 on within-allele ranking.
 **The deficit shrinks when labels are scarce, but never reverses.** Capping training data at 10
 rows per allele narrows the gap from -0.101 to -0.054. The pretraining prior is worth something
 where supervision runs out; it is never worth enough to win.
+
+**Fine-tuning helps, and is still not enough.** Letting gradients into the encoder beats
+freezing it by +0.064 on unseen peptides and +0.108 on the hardest split -- a real effect, and
+the one the literature predicts. It still trails BLOSUM by 0.14 to 0.20. So the conclusion does
+not depend on having used the model lazily: frozen or trained, the substitution matrix wins.
 
 **Zero-shot sequence likelihood is dead.** ESM2's masked-LM score for a peptide inside its
 groove correlates 0.087 with half-life. Thermodynamic plausibility is not kinetic stability.

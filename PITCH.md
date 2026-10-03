@@ -31,6 +31,9 @@ toward being a substitution matrix and stops.**
 Zero-shot sequence likelihood is worse: ρ = 0.087. Thermodynamic plausibility is not kinetic
 stability.
 
+And this is not because we used it lazily. Fine-tuned end to end, ESM2 gains +0.064 to +0.108
+over frozen -- a real effect -- and **still loses to BLOSUM by 0.14 to 0.20.**
+
 **The twist (20s).** Geometry behaves differently. We noticed there are only 75 alleles, not
 28,166 structures — and PDB 1HHK's groove matches this dataset's sequence 182/182 exactly, so no
 folding was needed at all. **Thirteen ProteinMPNN features beat 12,800 ESM dimensions on both
@@ -51,6 +54,7 @@ there.
 | ProteinMPNN alone | **13** | 0.501 | 0.363 | 0.308 |
 | ESM2-650M frozen | 12,800 | 0.597 | 0.321 | 0.251 |
 | ESM2 zero-shot likelihood | 14 | 0.117 | — | — |
+| ESM2 **fine-tuned end to end** | 35M params | 0.644 | 0.376 | 0.359 |
 
 The one real win is swapping the incumbent's small neural net for gradient-boosted trees:
 **+0.040 on unseen peptides, +0.093 on the hardest split.** No foundation model involved.
@@ -93,4 +97,6 @@ benchmark *is* the task.
 - 20% of half-lives are exactly zero (left-censored). We regress `log1p` and report AUC at 1h; a
   censoring-aware likelihood is the statistically correct treatment and we did not run it.
 - No continued pre-training on HLA-associated peptides, which is what the one published PLM win
-  on pMHC actually required.
+  on pMHC actually required. We fine-tuned, which is the second half of that recipe, but not the
+  first.
+- Fine-tuning ran at 3 folds rather than 5, so its error bars are wider than the frozen runs'.
