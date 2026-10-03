@@ -1,0 +1,54 @@
+{
+  "history": [
+    {
+      "family": "R1",
+      "name": "R1_reference",
+      "score": 0.6716043451360499,
+      "by_split": {
+        "peptide": 0.6716043451360499,
+        "allele": 0.4624808490587354,
+        "strict": 0.3130570460856325
+      },
+      "seconds": 38.44612097740173
+    },
+    {
+      "family": "R1",
+      "name": "R1_pred_ridge",
+      "score": 0.5694027669720029,
+      "by_split": {
+        "peptide": 0.5694027669720029,
+        "allele": 0.36228103978428017,
+        "strict": 0.13997721526136012
+      },
+      "seconds": 21.104825019836426
+    }
+  ],
+  "growth": {
+    "R1": {
+      "n_experiments": 2,
+      "minutes_spent": 1.0,
+      "best": 0.6716,
+      "best_config": "R1_reference",
+      "gain_total": 0.0,
+      "gain_per_experiment": 0.0,
+      "gain_per_hour": 0.0,
+      "gain_last_5": 0.0,
+      "saturating": false,
+      "curve": [
+        0.6716,
+        0.6716
+      ]
+    }
+  },
+  "settings": {
+    "families": [
+      "R1",
+      "R2",
+      "R3"
+    ],
+    "limit": 10000,
+    "folds": 3,
+    "max_minutes": 100.0,
+    "metric": "spearman"
+  }
+}
