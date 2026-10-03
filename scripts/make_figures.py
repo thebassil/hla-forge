@@ -25,38 +25,64 @@ SPLIT_LABEL = {
 }
 
 
-def split_ladder(df, metric: str = "spearman") -> None:
-    """One line per system across the split ladder. The collapse is the point."""
-    fig, ax = plt.subplots(figsize=(7.5, 4.6))
-    order = [s for s in SPLIT_ORDER if s in set(df["split"])]
-    for name, grp in df.groupby("name"):
-        grp = grp.set_index("split").reindex(order).dropna(subset=[metric])
-        if grp.empty:
+#: The systems worth putting in front of a reader, in the order they should be read.
+#: Everything else in artifacts/results is an ablation that supports one of these.
+HEADLINE = [
+    ("R6_affinity_plus_R1", "BLOSUM + affinity transfer (ours)", "#0b6e4f", 2.6, "-"),
+    ("R1C_target_rank", "BLOSUM + XGBoost", "#1b4f9c", 2.2, "-"),
+    ("netmhcstabpan_arch", "NetMHCstabpan architecture", "#555555", 2.0, "--"),
+    ("prott5_mean_xgb", "ProtT5-XL (3B)", "#d08c18", 1.8, "-"),
+    ("esm2_t33_mean_xgb_svd", "ESM2-650M frozen", "#c0392b", 1.8, "-"),
+    ("R4_reference", "ProteinMPNN geometry (13 features)", "#7b4fa0", 1.6, ":"),
+]
+
+
+def split_ladder(df, metric: str = "spearman", out_dir: Path = OUT) -> None:
+    """Six systems across the split ladder. The collapse from left to right is the argument.
+
+    Only the headline systems are drawn. Plotting all 34 experiments produces an unreadable
+    tangle -- the ablations live in `hla report` and `hla delta`, not in a figure.
+    """
+    # The random split is excluded on purpose: 89% of its test peptides are in training, and
+    # the strongest configurations were never run on it because the number would mean nothing.
+    # The leakage audit (`hla splits`) is where that story belongs.
+    order = [s for s in SPLIT_ORDER if s in set(df["split"]) and s != "random"]
+    fig, ax = plt.subplots(figsize=(8.0, 5.0))
+
+    for name, label, colour, width, style in HEADLINE:
+        grp = df[df["name"] == name].set_index("split").reindex(order)
+        series = grp[metric].dropna()
+        if series.empty:
             continue
-        xs = [order.index(s) for s in grp.index]
-        ax.plot(xs, grp[metric], marker="o", label=name, linewidth=2)
-        if f"{metric}_std" in grp:
-            ax.fill_between(
-                xs,
-                grp[metric] - grp[f"{metric}_std"],
-                grp[metric] + grp[f"{metric}_std"],
-                alpha=0.12,
-            )
+        xs = [order.index(s) for s in series.index]
+        ax.plot(xs, series.to_numpy(), marker="o", markersize=5, label=label,
+                color=colour, linewidth=width, linestyle=style, zorder=3)
+        std_col = f"{metric}_std"
+        if std_col in grp:
+            lo = (series - grp.loc[series.index, std_col].fillna(0)).to_numpy()
+            hi = (series + grp.loc[series.index, std_col].fillna(0)).to_numpy()
+            ax.fill_between(xs, lo, hi, color=colour, alpha=0.10, zorder=1)
+
     ax.set_xticks(range(len(order)))
-    ax.set_xticklabels([SPLIT_LABEL.get(s, s) for s in order], fontsize=8)
-    ax.set_ylabel(f"{metric} (5-fold mean ± sd)")
+    ax.set_xticklabels([SPLIT_LABEL.get(s, s) for s in order], fontsize=9)
+    ax.set_ylabel({"spearman": r"Spearman $\rho$",
+                   "spearman_per_allele_mean": r"within-allele Spearman $\rho$"}
+                  .get(metric, metric) + "  (5-fold mean ± sd)")
     ax.set_xlabel("evaluation regime, easiest to hardest")
+    ax.set_ylim(0, 0.95)
     ax.grid(axis="y", alpha=0.25)
-    ax.legend(fontsize=8, frameon=False)
+    ax.set_axisbelow(True)
+    ax.legend(fontsize=9, frameon=False, loc="lower left")
     fig.tight_layout()
-    OUT.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT / f"split_ladder_{metric}.png", dpi=200)
-    print(f"-> {OUT / f'split_ladder_{metric}.png'}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / f"split_ladder_{metric}.png", dpi=200)
+    print(f"-> {out_dir / f'split_ladder_{metric}.png'}")
 
 
-def overall_vs_per_allele(df) -> None:
+def overall_vs_per_allele(df, out_dir: Path = OUT) -> None:
     """Overall Spearman flatters every model; within-allele ranking is the honest number."""
-    sub = df.dropna(subset=["spearman", "spearman_per_allele_mean"])
+    names = {n for n, *_ in HEADLINE}
+    sub = df[df["name"].isin(names)].dropna(subset=["spearman", "spearman_per_allele_mean"])
     if sub.empty:
         return
     fig, ax = plt.subplots(figsize=(5.4, 5.2))
@@ -71,9 +97,9 @@ def overall_vs_per_allele(df) -> None:
     ax.grid(alpha=0.25)
     ax.legend(fontsize=8, frameon=False)
     fig.tight_layout()
-    OUT.mkdir(parents=True, exist_ok=True)
-    fig.savefig(OUT / "overall_vs_per_allele.png", dpi=200)
-    print(f"-> {OUT / 'overall_vs_per_allele.png'}")
+    out_dir.mkdir(parents=True, exist_ok=True)
+    fig.savefig(out_dir / "overall_vs_per_allele.png", dpi=200)
+    print(f"-> {out_dir / 'overall_vs_per_allele.png'}")
 
 
 
