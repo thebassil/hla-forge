@@ -129,7 +129,7 @@ def build_features(df: pd.DataFrame, cfg: ExperimentConfig) -> np.ndarray:
     rep = cfg.representation
     blocks: list[np.ndarray] = []
 
-    if rep.get("kind", "cheap") != "likelihood":
+    if rep.get("kind", "cheap") not in ("likelihood", "structure"):
         pep, hla = build_sides(df, rep)
         blocks.append(combine(pep, hla, cfg.interaction))
 
@@ -140,6 +140,13 @@ def build_features(df: pd.DataFrame, cfg: ExperimentConfig) -> np.ndarray:
 
         lik = dict(lik or {})
         blocks.append(score_pairs(df, **lik))
+
+    # R4: inverse-folding scores over the groove backbone, standalone or bolted on.
+    struct = rep.get("structure")
+    if struct is not None or rep.get("kind") == "structure":
+        from .structure import score_structure
+
+        blocks.append(score_structure(df, **dict(struct or {})))
 
     if not blocks:
         raise ValueError("representation produced no features")

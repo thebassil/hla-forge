@@ -47,6 +47,14 @@ ARMS: dict[str, dict] = {
         interaction="concat",
         model={"kind": "xgboost", "reduce": 256},
     ),
+    # The configuration R2F actually found best: flatten BOTH sides, no compression.
+    # Pooling the groove costs ~0.22, so the arms above understate what ESM can do.
+    "R2_esm2t12_bothflat_full": dict(
+        representation={"kind": "plm",
+                        "plm": {"model": "esm2_t12", "pooling": "flatten"}},
+        interaction="concat",
+        model={"kind": "xgboost"},
+    ),
 }
 
 CAPS = [10, 25, 50, 100, 200, 400, None]  # None = all available
@@ -73,7 +81,16 @@ def main() -> None:
     ap.add_argument("--folds", type=int, default=3)
     ap.add_argument("--seed", type=int, default=0)
     ap.add_argument("--min-allele-n", type=int, default=20)
+    ap.add_argument("--arms", nargs="*", default=None, help="subset of ARMS to run")
+    ap.add_argument("--caps", nargs="*", type=int, default=None,
+                    help="training-row caps; 0 means uncapped")
     args = ap.parse_args()
+
+    global ARMS, CAPS
+    if args.arms:
+        ARMS = {k: v for k, v in ARMS.items() if k in args.arms}
+    if args.caps:
+        CAPS = [c if c > 0 else None for c in args.caps]
 
     df = load_raw()
     y = df["y"].to_numpy(dtype=float)
@@ -118,11 +135,12 @@ def main() -> None:
     print("\nmean within-allele Spearman vs training rows per allele\n")
     print(table.to_string(float_format=lambda v: f"{v:.3f}"))
 
-    print("\nPLM minus BLOSUM, per cap:")
-    for cap in table.index:
-        best_plm = max(table.loc[cap, "R2_esm2t12_flatten"], table.loc[cap, "R2_esm2t33_flatten"])
-        gap = best_plm - table.loc[cap, "R1_blosum_xgb"]
-        print(f"  cap={cap:>4s}: {gap:+.3f}  {'PLM WINS' if gap > 0 else ''}")
+    plm_cols = [c for c in table.columns if c.startswith("R2")]
+    if "R1_blosum_xgb" in table.columns and plm_cols:
+        print("\nbest PLM minus BLOSUM, per cap:")
+        for cap in table.index:
+            gap = table.loc[cap, plm_cols].max() - table.loc[cap, "R1_blosum_xgb"]
+            print(f"  cap={cap:>4s}: {gap:+.3f}  {'*** PLM WINS ***' if gap > 0 else ''}")
 
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text(json.dumps({"rows": rows, "settings": vars(args)}, indent=2, default=float))

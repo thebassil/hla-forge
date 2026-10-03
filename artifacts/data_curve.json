@@ -1,0 +1,157 @@
+{
+  "rows": [
+    {
+      "cap": "10",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.1865992785334656,
+      "overall": 0.49159308358754905,
+      "mean_train_rows": 742
+    },
+    {
+      "cap": "10",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.07007032074997413,
+      "overall": 0.19555191304237085,
+      "mean_train_rows": 742
+    },
+    {
+      "cap": "10",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.06771821581146203,
+      "overall": 0.20294004802936094,
+      "mean_train_rows": 742
+    },
+    {
+      "cap": "25",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.33449146698481147,
+      "overall": 0.6064584081911841,
+      "mean_train_rows": 1791
+    },
+    {
+      "cap": "25",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.1272186453569454,
+      "overall": 0.29610473975020507,
+      "mean_train_rows": 1791
+    },
+    {
+      "cap": "25",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.09060115703376583,
+      "overall": 0.25986723679920193,
+      "mean_train_rows": 1791
+    },
+    {
+      "cap": "50",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.4260161865155771,
+      "overall": 0.670617102994129,
+      "mean_train_rows": 3491
+    },
+    {
+      "cap": "50",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.1452958835405476,
+      "overall": 0.34059760440759757,
+      "mean_train_rows": 3491
+    },
+    {
+      "cap": "50",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.12824396545771685,
+      "overall": 0.33048975899428545,
+      "mean_train_rows": 3491
+    },
+    {
+      "cap": "100",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.5347409053690574,
+      "overall": 0.7321920993458454,
+      "mean_train_rows": 6891
+    },
+    {
+      "cap": "100",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.16696218118794917,
+      "overall": 0.3914683549694459,
+      "mean_train_rows": 6891
+    },
+    {
+      "cap": "100",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.16274754487697654,
+      "overall": 0.3779212538781877,
+      "mean_train_rows": 6891
+    },
+    {
+      "cap": "200",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.6031201982010073,
+      "overall": 0.7681783120610601,
+      "mean_train_rows": 13618
+    },
+    {
+      "cap": "200",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.20509107460793638,
+      "overall": 0.4418324090739818,
+      "mean_train_rows": 13618
+    },
+    {
+      "cap": "200",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.1940951487094377,
+      "overall": 0.4276082900573525,
+      "mean_train_rows": 13618
+    },
+    {
+      "cap": "400",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.6142398283006517,
+      "overall": 0.7770756040420135,
+      "mean_train_rows": 17890
+    },
+    {
+      "cap": "400",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.22864755784301075,
+      "overall": 0.46845981772609424,
+      "mean_train_rows": 17890
+    },
+    {
+      "cap": "400",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.21137125844758362,
+      "overall": 0.44264957309522035,
+      "mean_train_rows": 17890
+    },
+    {
+      "cap": "all",
+      "arm": "R1_blosum_xgb",
+      "per_allele": 0.624238703578302,
+      "overall": 0.7811752022958902,
+      "mean_train_rows": 18777
+    },
+    {
+      "cap": "all",
+      "arm": "R2_esm2t12_flatten",
+      "per_allele": 0.23843884782516703,
+      "overall": 0.4779769455252656,
+      "mean_train_rows": 18777
+    },
+    {
+      "cap": "all",
+      "arm": "R2_esm2t33_flatten",
+      "per_allele": 0.2060682068393928,
+      "overall": 0.44510746546119406,
+      "mean_train_rows": 18777
+    }
+  ],
+  "settings": {
+    "split": "peptide",
+    "folds": 3,
+    "seed": 0,
+    "min_allele_n": 20
+  }
+}

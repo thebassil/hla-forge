@@ -140,8 +140,6 @@ def score_structure(
     ProteinMPNN's score depends on the random order in which positions are decoded, so we
     average log-probabilities over several orders rather than trusting one draw.
     """
-    import torch
-
     keys = (df["hla_seq"] + "|" + df["peptide"]).tolist()
     uniq = sorted(set(keys))
     digest = hashlib.sha1("\n".join(uniq).encode()).hexdigest()[:16]
@@ -150,6 +148,11 @@ def score_structure(
         data = np.load(path, allow_pickle=False)
         table = dict(zip(data["keys"].tolist(), data["vectors"], strict=True))
         return np.stack([table[k] for k in keys]).astype(np.float32)
+
+    # Imported only on a cache miss: torch and XGBoost each bring their own OpenMP runtime,
+    # and loading both in one macOS process deadlocks the tree fit. Every downstream
+    # experiment reads the cache, so torch never has to be present for them.
+    import torch
 
     if device is None:
         device = (

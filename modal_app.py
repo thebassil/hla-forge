@@ -180,17 +180,19 @@ def _mpnn_remote(weights: str, orders: int, batch_size: int, limit: int | None) 
 
 
 @app.function(image=image, cpu=16.0, memory=65536, timeout=7200, volumes=VOLUMES)
-def _curve_remote(folds: int, seed: int) -> dict:
+def _curve_remote(folds: int, seed: int, arms: str = "", caps: str = "") -> dict:
     """The data-starvation crossover curve. Needs a big box: the 650M flattened
     representation is 12,800 columns over 28,166 rows and OOMs a 24GB laptop."""
     import subprocess
 
     _chdir()
-    out = subprocess.run(
-        ["python", "/root/scripts/data_curve.py", "--folds", str(folds),
-         "--seed", str(seed)],
-        capture_output=True, text=True,
-    )
+    cmd = ["python", "/root/scripts/data_curve.py", "--folds", str(folds),
+           "--seed", str(seed)]
+    if arms:
+        cmd += ["--arms", *arms.split(",")]
+    if caps:
+        cmd += ["--caps", *caps.split(",")]
+    out = subprocess.run(cmd, capture_output=True, text=True)
     artifacts.commit()
     return {"stdout": out.stdout[-8000:], "stderr": out.stderr[-3000:],
             "returncode": out.returncode}
@@ -204,8 +206,8 @@ def mpnn(weights: str = "v_48_020", orders: int = 4, batch_size: int = 64, limit
 
 
 @app.local_entrypoint()
-def curve(folds: int = 3, seed: int = 0):
-    res = _curve_remote.remote(folds, seed)
+def curve(folds: int = 3, seed: int = 0, arms: str = "", caps: str = ""):
+    res = _curve_remote.remote(folds, seed, arms, caps)
     print(res["stdout"])
     if res["returncode"] != 0:
         print("STDERR:", res["stderr"])

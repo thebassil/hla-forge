@@ -154,3 +154,34 @@ def all_jobs(families: list[str] | None = None) -> list[tuple[str, str, dict]]:
         for name, spec in QUEUES[fam]():
             jobs.append((fam, name, spec))
     return jobs
+
+
+def queue_r4() -> list[tuple[str, dict]]:
+    """R4 structure: ProteinMPNN log P(peptide | groove backbone) as features."""
+    base = dict(
+        representation={"kind": "structure"},
+        interaction="concat",
+        model={"kind": "xgboost"},
+        target="log1p",
+    )
+    out: list[tuple[str, dict]] = [("R4_reference", base)]
+    for kind in ["ridge", "hgb"]:
+        out.append((f"R4_pred_{kind}", {**base, "model": {"kind": kind}}))
+    # the question that matters: does geometry add anything the sequence model lacks?
+    out.append(
+        ("R4_plus_R1",
+         {**base,
+          "representation": {"kind": "cheap", "peptide": ["blosum", "physchem"],
+                             "hla": ["blosum"], "structure": {}}})
+    )
+    out.append(
+        ("R4_plus_R1_plus_R3",
+         {**base,
+          "representation": {"kind": "cheap", "peptide": ["blosum", "physchem"],
+                             "hla": ["blosum"], "structure": {},
+                             "likelihood": {"model": "esm2_t12", "mode": "wt"}}})
+    )
+    return out
+
+
+QUEUES["R4"] = queue_r4
