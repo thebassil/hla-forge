@@ -1,0 +1,42 @@
+{
+  "device": "mps",
+  "n_probe": 128,
+  "models": {
+    "esm2_t6": {
+      "params_m": 7.5,
+      "load_s": 134.1,
+      "short_seqs_per_s": 377.6,
+      "long_seqs_per_s": 111.9,
+      "full_embed_min": 0.3,
+      "zeroshot_wt_min": 4.2,
+      "masked_marginal_min": 37.8
+    },
+    "esm2_t12": {
+      "params_m": 33.5,
+      "load_s": 0.8,
+      "short_seqs_per_s": 806.4,
+      "long_seqs_per_s": 66.9,
+      "full_embed_min": 0.1,
+      "zeroshot_wt_min": 7.0,
+      "masked_marginal_min": 63.2
+    },
+    "esm2_t30": {
+      "params_m": 148.1,
+      "load_s": 85.5,
+      "short_seqs_per_s": 257.5,
+      "long_seqs_per_s": 34.3,
+      "full_embed_min": 0.4,
+      "zeroshot_wt_min": 13.7,
+      "masked_marginal_min": 123.2
+    },
+    "esm2_t33": {
+      "params_m": 651.0,
+      "load_s": 243.5,
+      "short_seqs_per_s": 65.1,
+      "long_seqs_per_s": 9.4,
+      "full_embed_min": 1.5,
+      "zeroshot_wt_min": 49.9,
+      "masked_marginal_min": 449.5
+    }
+  }
+}

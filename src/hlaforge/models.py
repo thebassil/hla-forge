@@ -8,6 +8,7 @@ import numpy as np
 from sklearn.ensemble import HistGradientBoostingRegressor, RandomForestRegressor
 from sklearn.linear_model import Ridge
 from sklearn.neural_network import MLPRegressor
+from sklearn.decomposition import TruncatedSVD
 from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 
@@ -30,7 +31,26 @@ def _xgboost(params: dict[str, Any], seed: int):
     return XGBRegressor(**{**defaults, **params})
 
 
-def build_model(kind: str, params: dict[str, Any] | None = None, seed: int = 0):
+def build_model(
+    kind: str,
+    params: dict[str, Any] | None = None,
+    seed: int = 0,
+    reduce: int | None = None,
+):
+    """Construct a predictor. `reduce` prepends a truncated SVD to the pipeline.
+
+    The SVD is part of the pipeline, so it is fit on the training fold only. Frozen PLM
+    embeddings are 480-1280 dense dimensions per side and tree ensembles scale badly in that
+    regime; projecting to a few hundred components cuts fit time several-fold. Because it is
+    unsupervised and fold-local, it cannot leak the target.
+    """
+    est = _build_estimator(kind, params, seed)
+    if reduce:
+        return Pipeline([("svd", TruncatedSVD(n_components=reduce, random_state=seed)), ("est", est)])
+    return est
+
+
+def _build_estimator(kind: str, params: dict[str, Any] | None = None, seed: int = 0):
     params = dict(params or {})
     if kind == "ridge":
         return Pipeline(

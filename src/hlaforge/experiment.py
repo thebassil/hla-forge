@@ -169,7 +169,12 @@ def run_experiment(
         fold_metrics = []
         t_split = time.time()
         for train_idx, test_idx in folds:
-            model = build_model(cfg.model.get("kind", "ridge"), cfg.model.get("params"), cfg.seed)
+            model = build_model(
+                cfg.model.get("kind", "ridge"),
+                cfg.model.get("params"),
+                cfg.seed,
+                reduce=cfg.model.get("reduce"),
+            )
             model.fit(X[train_idx], y[train_idx])
             pred = np.asarray(model.predict(X[test_idx]), dtype=float)
             fold_metrics.append(

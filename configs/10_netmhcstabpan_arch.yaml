@@ -1,0 +1,20 @@
+name: netmhcstabpan_arch
+notes: >
+  NetMHCstabpan's architecture expressed in our grammar: BLOSUM encoding of peptide and
+  pseudosequence into a small feed-forward net. The released tool is contaminated on this
+  dataset (it trained on all of it), so this is the honest, split-clean comparator.
+representation:
+  kind: cheap
+  peptide: [blosum]
+  hla: [blosum]
+interaction: concat
+model:
+  kind: mlp
+  params:
+    hidden_layer_sizes: [56]
+    alpha: 0.0001
+    max_iter: 200
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0
