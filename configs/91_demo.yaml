@@ -1,0 +1,17 @@
+name: demo
+notes: "Live-demo config: the whole pipeline on 2,000 rows in ~14 seconds, showing the split-ladder collapse live."
+representation:
+  kind: cheap
+  peptide: [blosum]
+  hla: [blosum]
+interaction: concat
+model:
+  kind: hgb
+  params:
+    max_iter: 80
+    learning_rate: 0.12
+target: log1p
+splits: [random, peptide, strict]
+n_splits: 2
+seed: 0
+limit: 2000
