@@ -1,0 +1,16 @@
+name: blosum_xgb_plus_likelihood
+notes: "Does zero-shot PLM likelihood add anything on top of the cheap-feature model?"
+representation:
+  kind: cheap
+  peptide: [blosum, physchem]
+  hla: [blosum]
+  likelihood:
+    model: esm2_t12
+    mode: wt
+interaction: concat
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

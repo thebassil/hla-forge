@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 
 import pandas as pd
@@ -15,6 +16,17 @@ from .experiment import ExperimentConfig, load_results, run_experiment
 
 app = typer.Typer(add_completion=False, help="hla-forge: peptide-HLA stability ablation harness")
 console = Console()
+
+# Ridge on wide, highly correlated embedding matrices triggers a conditioning warning on every
+# fold. It is expected for these feature widths and would otherwise drown the result lines.
+warnings.filterwarnings("ignore", category=UserWarning, module="sklearn")
+warnings.filterwarnings("ignore", message=".*ill-conditioned matrix.*")
+try:
+    from scipy.linalg import LinAlgWarning
+
+    warnings.filterwarnings("ignore", category=LinAlgWarning)
+except ImportError:
+    pass
 
 
 def _load(path: str, limit: int | None) -> pd.DataFrame:

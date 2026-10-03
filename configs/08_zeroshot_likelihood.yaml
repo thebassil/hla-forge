@@ -1,0 +1,14 @@
+name: esm2t12_zeroshot_likelihood
+notes: "PLM used as a scorer, not an encoder: masked-LM log-probs of the peptide in HLA context."
+representation:
+  kind: likelihood
+  likelihood:
+    model: esm2_t12
+    mode: wt
+interaction: concat
+model:
+  kind: xgboost
+target: log1p
+splits: [random, peptide, allele, strict]
+n_splits: 5
+seed: 0

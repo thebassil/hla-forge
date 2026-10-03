@@ -121,8 +121,24 @@ def combine(pep: np.ndarray, hla: np.ndarray, interaction: str) -> np.ndarray:
 
 
 def build_features(df: pd.DataFrame, cfg: ExperimentConfig) -> np.ndarray:
-    pep, hla = build_sides(df, cfg.representation)
-    X = combine(pep, hla, cfg.interaction)
+    rep = cfg.representation
+    blocks: list[np.ndarray] = []
+
+    if rep.get("kind", "cheap") != "likelihood":
+        pep, hla = build_sides(df, rep)
+        blocks.append(combine(pep, hla, cfg.interaction))
+
+    # Zero-shot PLM likelihood features can stand alone or be bolted onto any representation.
+    lik = rep.get("likelihood")
+    if lik or rep.get("kind") == "likelihood":
+        from .likelihood import score_pairs
+
+        lik = dict(lik or {})
+        blocks.append(score_pairs(df, **lik))
+
+    if not blocks:
+        raise ValueError("representation produced no features")
+    X = blocks[0] if len(blocks) == 1 else np.concatenate(blocks, axis=1)
     return np.ascontiguousarray(X, dtype=np.float32)
 
 
