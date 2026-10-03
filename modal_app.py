@@ -220,7 +220,21 @@ def _finetune_remote(model: str, splits: str, folds: int, epochs: int, lora_rank
 @app.local_entrypoint()
 def finetune(model: str = "esm2_t12", splits: str = "peptide,allele,strict", folds: int = 3,
              epochs: int = 4, lora_rank: int = 0, batch_size: int = 64, lr: float = 3e-5,
-             limit: int = 0):
+             limit: int = 0, wait: bool = True):
+    """Fine-tune on GPU. Pass --no-wait with `modal run --detach` for long runs.
+
+    Blocking on .remote() means a dropped local client cancels the call, which is what killed
+    the first 650M attempt. .spawn() hands the job to Modal and returns, so the run survives.
+    """
+    if not wait:
+        call = _finetune_remote.spawn(
+            model, splits, folds, epochs, lora_rank, batch_size, lr, limit
+        )
+        print(f"spawned {call.object_id}")
+        print("results land on the volume; fetch with:")
+        print("  modal volume ls hlaforge-artifacts /results")
+        print("  modal volume get hlaforge-artifacts /results artifacts/")
+        return
     res = _finetune_remote.remote(model, splits, folds, epochs, lora_rank, batch_size, lr, limit)
     print(res["stdout"])
     if res["returncode"] != 0:
