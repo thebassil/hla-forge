@@ -1,0 +1,17 @@
+name: prott5_mean_xgb
+notes: >
+  ProtT5-XL, a different architecture (T5 encoder-decoder) trained on the same UniRef50 as ESM2.
+  If language models lose here, the finding should not depend on which language model.
+representation:
+  kind: plm
+  plm:
+    model: prott5
+    pooling: mean
+interaction: concat
+model:
+  kind: xgboost
+  reduce: 256
+target: rank
+splits: [peptide, allele, strict]
+n_splits: 5
+seed: 0

@@ -44,6 +44,7 @@ architecture, retrained under these splits because the released tool saw all of 
 | `R4_reference` (geometry alone) | **13** | 0.501 | 0.363 | 0.308 |
 | `esm2_t33_mean_xgb` (650M PLM) | 12,800 | 0.597 | 0.321 | 0.251 |
 | `esm2t12_zeroshot_likelihood` | 14 | 0.117 | — | — |
+| `prott5_mean_xgb` (3B, different architecture) | 2,048 | 0.605 | 0.388 | 0.284 |
 | `R5_finetune_esm2_t12_full` | 35M params | 0.644 | 0.376 | 0.359 |
 | `R1C_target_rank` (train on ranks) | 908 | 0.795 | 0.543 | 0.542 |
 | **`R6_affinity_plus_R1`** (+ transfer) | 913 | **0.829** | **0.683** | **0.672** |
@@ -80,6 +81,11 @@ the allele split** — so allele-split differences below about 0.1 are not diffe
 
 **Swapping the predictor is the only real win.** Trees instead of the incumbent's small neural
 net: +0.040 on unseen peptides, +0.093 on the hardest split. No foundation model involved.
+
+**And it is not about ESM2.** ProtT5-XL is a 3-billion-parameter T5 encoder-decoder from a
+different lab, trained on the same UniRef50. It scores 0.605 / 0.388 / 0.284, landing almost
+exactly on ESM2-650M's 0.597 / 0.321 / 0.251. Two architectures, two labs, four orders of
+magnitude of scale, one answer.
 
 **Language models lose at every scale, and only improve by becoming BLOSUM.** Going from 7.5M
 to 650M parameters buys +0.023. What actually helps is turning pooling off (+0.221) and
