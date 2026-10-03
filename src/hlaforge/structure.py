@@ -78,15 +78,36 @@ def _template():
     }
 
 
-def _static_tensors(tmpl: dict, device: str):
-    """Coordinates, chain labels and residue indices are identical for every row."""
+def _groove_in_template_frame(
+    predicted: np.ndarray, tmpl: dict, n_groove: int = 182
+) -> np.ndarray:
+    """Put a predicted alpha1/alpha2 backbone into the template complex's coordinate frame.
+
+    Superposing the prediction onto the template -- rather than the other way round -- lets the
+    peptide, alpha3 domain and beta-2 microglobulin stay exactly where the crystal structure put
+    them, so the only thing that changes between alleles is the groove itself.
+    """
+    from .fold import kabsch
+
+    helix = np.r_[57:85, 138:180]
+    rot, trans = kabsch(predicted[helix, 1, :], tmpl["hla_coords"][helix, 1, :])
+    flat = predicted.reshape(-1, 3)
+    moved = ((rot @ flat.T).T + trans).reshape(predicted.shape)
+    out = tmpl["hla_coords"].copy()
+    out[:n_groove] = moved[:n_groove]
+    return out.astype(np.float32)
+
+
+def _static_tensors(tmpl: dict, device: str, hla_coords: np.ndarray | None = None):
+    """Coordinates, chain labels and residue indices for one complex."""
     import torch
 
     n_hla = len(tmpl["hla_seq"])
     n_b2m = len(tmpl["b2m_seq"])
     n_pep = len(tmpl["pep_seq"])
     coords = np.concatenate(
-        [tmpl["hla_coords"], tmpl["b2m_coords"], tmpl["pep_coords"]], axis=0
+        [tmpl["hla_coords"] if hla_coords is None else hla_coords,
+         tmpl["b2m_coords"], tmpl["pep_coords"]], axis=0
     )
 
     residue_idx = np.concatenate([
@@ -134,6 +155,7 @@ def score_structure(
     device: str | None = None,
     cache: bool = True,
     seed: int = 0,
+    per_allele: bool = False,
 ) -> np.ndarray:
     """Per-row inverse-folding features for the peptide given the groove backbone.
 
@@ -143,7 +165,8 @@ def score_structure(
     keys = (df["hla_seq"] + "|" + df["peptide"]).tolist()
     uniq = sorted(set(keys))
     digest = hashlib.sha1("\n".join(uniq).encode()).hexdigest()[:16]
-    path = CACHE_DIR / f"mpnn__{weights}_o{n_decoding_orders}__{digest}.npz"
+    tag = "mpnnpa" if per_allele else "mpnn"
+    path = CACHE_DIR / f"{tag}__{weights}_o{n_decoding_orders}__{digest}.npz"
     if cache and path.exists():
         data = np.load(path, allow_pickle=False)
         table = dict(zip(data["keys"].tolist(), data["vectors"], strict=True))
@@ -161,20 +184,59 @@ def score_structure(
         )
     tmpl = _template()
     model = _load_mpnn(weights, device)
-    static = _static_tensors(tmpl, device)
 
     uniq_df = pd.DataFrame(
         {"hla_seq": [k.split("|")[0] for k in uniq], "peptide": [k.split("|")[1] for k in uniq]}
     )
     S_all = _encode_rows(uniq_df, tmpl)
-    L = S_all.shape[1]
-    pep_slice = static["slice_pep"]
     generator = torch.Generator(device="cpu").manual_seed(seed)
 
+    # Without per-allele folding every row shares one backbone, so the tensors are built once.
+    # With it, each groove sequence gets its own structure and rows are grouped by allele.
+    folded: dict[str, np.ndarray] = {}
+    if per_allele:
+        from .fold import fold_alleles
+
+        folded = fold_alleles(df, device=device)
+        groups = [
+            (seq, np.flatnonzero(uniq_df["hla_seq"].to_numpy() == seq))
+            for seq in uniq_df["hla_seq"].unique()
+        ]
+        print(f"  scoring against {len(groups)} predicted grooves", flush=True)
+    else:
+        groups = [(None, np.arange(len(uniq)))]
+
     out = np.zeros((len(uniq), len(FEATURE_NAMES)), dtype=np.float32)
+    for groove_seq, members in groups:
+        coords = (
+            _groove_in_template_frame(folded[groove_seq], tmpl) if groove_seq is not None else None
+        )
+        static = _static_tensors(tmpl, device, hla_coords=coords)
+        L = S_all.shape[1]
+        pep_slice = static["slice_pep"]
+        _score_group(
+            model, S_all, members, static, L, pep_slice, n_decoding_orders,
+            batch_size, device, generator, out,
+        )
+
+    if cache:
+        CACHE_DIR.mkdir(parents=True, exist_ok=True)
+        np.savez_compressed(path, keys=np.array(uniq), vectors=out)
+    table = dict(zip(uniq, out, strict=True))
+    return np.stack([table[k] for k in keys]).astype(np.float32)
+
+
+def _score_group(
+    model, S_all, members, static, L, pep_slice, n_decoding_orders,
+    batch_size, device, generator, out,
+) -> None:
+    """Score one set of rows that share a backbone."""
+    import torch
+
     with torch.no_grad():
-        for start in range(0, len(uniq), batch_size):
-            S = torch.tensor(S_all[start : start + batch_size], device=device)
+        for start in range(0, len(members), batch_size):
+            idx = members[start : start + batch_size]
+            S = torch.tensor(S_all[idx], device=device)
             b = S.shape[0]
             X = static["X"].unsqueeze(0).expand(b, -1, -1, -1).contiguous()
             mask = torch.ones(b, L, device=device)
@@ -201,13 +263,7 @@ def score_structure(
                  entropy.mean(1, keepdims=True)],
                 axis=1,
             )
-            out[start : start + b] = block
-
-    if cache:
-        CACHE_DIR.mkdir(parents=True, exist_ok=True)
-        np.savez_compressed(path, keys=np.array(uniq), vectors=out)
-    table = dict(zip(uniq, out, strict=True))
-    return np.stack([table[k] for k in keys]).astype(np.float32)
+            out[idx] = block
 
 
 def zero_shot_ranking(df: pd.DataFrame, **kwargs) -> np.ndarray:

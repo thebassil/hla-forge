@@ -20,7 +20,18 @@ MODELS = {
     "esm2_t12": "facebook/esm2_t12_35M_UR50D",
     "esm2_t30": "facebook/esm2_t30_150M_UR50D",
     "esm2_t33": "facebook/esm2_t33_650M_UR50D",
+    # ProtT5 is an encoder-decoder trained on UniRef50; we use the encoder only. Its tokenizer
+    # expects residues separated by spaces, and it has no masked-LM head, so it can serve as an
+    # encoder here but not as a scorer.
+    "prott5": "Rostlab/prot_t5_xl_uniref50",
+    # ESM Cambrian. Shipped through EvolutionaryScale's own `esm` package rather than
+    # transformers, so it takes a separate code path below.
+    "esmc_300m": "esmc_300m",
+    "esmc_600m": "esmc_600m",
 }
+
+#: Models that do not load through transformers' AutoModel.
+SPECIAL_LOADERS = {"prott5", "esmc_300m", "esmc_600m"}
 
 POOLINGS = ["mean", "cls", "flatten", "max"]
 
@@ -64,23 +75,44 @@ def embed_sequences(
         return dict(zip(data["keys"].tolist(), data["vectors"], strict=True))
 
     import torch
-    from transformers import AutoModel, AutoTokenizer
 
     dev = _device(device)
-    tok = AutoTokenizer.from_pretrained(MODELS[model])
-    net = AutoModel.from_pretrained(MODELS[model], output_hidden_states=True).to(dev).eval()
+    if model.startswith("esmc"):
+        mat = _embed_esmc(uniq, model, pooling, batch_size, dev)
+        if cache:
+            CACHE_DIR.mkdir(parents=True, exist_ok=True)
+            np.savez_compressed(path, keys=np.array(uniq), vectors=mat)
+        return dict(zip(uniq, mat, strict=True))
+
+    if model == "prott5":
+        from transformers import T5EncoderModel, T5Tokenizer
+
+        tok = T5Tokenizer.from_pretrained(MODELS[model], do_lower_case=False, legacy=True)
+        net = T5EncoderModel.from_pretrained(MODELS[model]).to(dev).eval()
+    else:
+        from transformers import AutoModel, AutoTokenizer
+
+        tok = AutoTokenizer.from_pretrained(MODELS[model])
+        net = AutoModel.from_pretrained(MODELS[model], output_hidden_states=True).to(dev).eval()
 
     vectors: list[np.ndarray] = []
     with torch.no_grad():
         for start in range(0, len(uniq), batch_size):
             batch = uniq[start : start + batch_size]
-            enc = tok(batch, return_tensors="pt", padding=True).to(dev)
-            out = net(**enc)
-            hidden = out.hidden_states[layer]  # (B, T, D)
+            if model == "prott5":
+                # ProtT5 wants whitespace-separated residues and has no BOS token.
+                spaced = [" ".join(seq) for seq in batch]
+                enc = tok(spaced, return_tensors="pt", padding=True).to(dev)
+                hidden = net(**enc).last_hidden_state
+            else:
+                enc = tok(batch, return_tensors="pt", padding=True).to(dev)
+                hidden = net(**enc).hidden_states[layer]  # (B, T, D)
             mask = enc["attention_mask"].unsqueeze(-1).float()
-            # Drop BOS/EOS so pooling covers residues only.
+            # Drop the special tokens so pooling covers residues only. ESM wraps sequences in
+            # BOS and EOS; ProtT5 appends EOS with no BOS.
             residue_mask = mask.clone()
-            residue_mask[:, 0] = 0
+            if model != "prott5":
+                residue_mask[:, 0] = 0
             lengths = enc["attention_mask"].sum(1)
             for i, length in enumerate(lengths):
                 residue_mask[i, length - 1] = 0
@@ -96,7 +128,8 @@ def embed_sequences(
                 if len(torch.unique(lens)) != 1:
                     raise ValueError("pooling='flatten' requires equal-length sequences")
                 n_res = int(lens[0].item())
-                pooled = hidden[:, 1 : 1 + n_res].reshape(len(batch), -1)
+                offset = 0 if model == "prott5" else 1
+                pooled = hidden[:, offset : offset + n_res].reshape(len(batch), -1)
             vectors.append(pooled.float().cpu().numpy())
 
     mat = np.concatenate(vectors, axis=0).astype(np.float32)
@@ -104,6 +137,34 @@ def embed_sequences(
         CACHE_DIR.mkdir(parents=True, exist_ok=True)
         np.savez_compressed(path, keys=np.array(uniq), vectors=mat)
     return dict(zip(uniq, mat, strict=True))
+
+
+def _embed_esmc(
+    uniq: list[str], model: str, pooling: str, batch_size: int, dev: str
+) -> np.ndarray:
+    """ESM Cambrian, via EvolutionaryScale's own package rather than transformers."""
+    import torch
+    from esm.models.esmc import ESMC
+    from esm.sdk.api import ESMProtein, LogitsConfig
+
+    net = ESMC.from_pretrained(MODELS[model]).to(dev).eval()
+    cfg = LogitsConfig(sequence=True, return_embeddings=True)
+    vectors = []
+    with torch.no_grad():
+        for seq in uniq:
+            out = net.logits(net.encode(ESMProtein(sequence=seq)), cfg)
+            h = out.embeddings[0]          # (T, D) including BOS/EOS
+            residues = h[1:-1]
+            if pooling == "mean":
+                v = residues.mean(0)
+            elif pooling == "max":
+                v = residues.max(0).values
+            elif pooling == "cls":
+                v = h[0]
+            else:
+                v = residues.reshape(-1)
+            vectors.append(v.float().cpu().numpy())
+    return np.stack(vectors).astype(np.float32)
 
 
 def encode_side_plm(

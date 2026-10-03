@@ -248,3 +248,27 @@ def queue_r6() -> list[tuple[str, dict]]:
 
 
 QUEUES["R6"] = queue_r6
+
+
+def queue_r7() -> list[tuple[str, dict]]:
+    """R7: the protein language models in the brief that ESM-2 stood in for.
+
+    The scaling and usage-mode results are all ESM-2. If the finding is that language models
+    lose here, it should not depend on which language model. ProtT5 is a different architecture
+    (encoder-decoder, T5) trained on the same UniRef50; ESM Cambrian is a newer pretraining
+    recipe from the same lineage. Both are run in the configuration that worked best for ESM-2 --
+    position-resolved, uncompressed -- so they get the strongest form of the comparison.
+    """
+    def rep(model, pooling="flatten"):
+        return {"kind": "plm", "plm": {"model": model, "pooling": pooling}}
+
+    base = dict(interaction="concat", model={"kind": "xgboost", "reduce": 256}, target="rank")
+
+    out: list[tuple[str, dict]] = [("R7_reference", {**base, "representation": rep("esm2_t12")})]
+    for model in ["prott5", "esmc_300m", "esmc_600m"]:
+        out.append((f"R7_{model}", {**base, "representation": rep(model)}))
+        out.append((f"R7_{model}_mean", {**base, "representation": rep(model, "mean")}))
+    return out
+
+
+QUEUES["R7"] = queue_r7

@@ -22,6 +22,9 @@ DEPS = [
     "torch>=2.2", "transformers>=4.44", "numpy>=1.26", "pandas>=2.2,<3",
     "scipy>=1.13", "scikit-learn>=1.5", "xgboost>=2.1", "pyyaml>=6.0",
     "typer>=0.12", "rich>=13.7", "tqdm>=4.66",
+    # ProtT5 needs sentencepiece; ESM Cambrian ships in EvolutionaryScale's own package;
+    # ESMFold and ESM-IF each need extras that are painful locally but fine on Linux.
+    "sentencepiece>=0.2", "esm>=3.1", "accelerate>=0.30",
 ]
 
 image = (
@@ -42,6 +45,8 @@ hf_cache = modal.Volume.from_name("hlaforge-hf-cache", create_if_missing=True)
 app = modal.App("hlaforge")
 
 VOLUMES = {"/root/artifacts": artifacts, "/cache": hf_cache}
+
+# fold.py writes to artifacts/structures, which is inside the mounted volume.
 
 
 def _chdir() -> None:
@@ -163,8 +168,24 @@ def queue(
     print(f"-> {out}\n   summarise with: python scripts/growth_report.py {out}")
 
 
+@app.function(image=image, gpu="A100-40GB", timeout=14400, volumes=VOLUMES)
+def _fold_remote(chunk_size: int) -> dict:
+    """One ESMFold structure per unique groove sequence -- 75 folds, not 28,166."""
+    _chdir()
+    from hlaforge.data import load_raw
+    from hlaforge.fold import fold_alleles
+
+    df = load_raw()
+    grooves = fold_alleles(df, device="cuda", chunk_size=chunk_size)
+    artifacts.commit()
+    hf_cache.commit()
+    return {"n_grooves": len(grooves),
+            "shape": list(next(iter(grooves.values())).shape)}
+
+
 @app.function(image=image, gpu="A10G", timeout=14400, volumes=VOLUMES)
-def _mpnn_remote(weights: str, orders: int, batch_size: int, limit: int | None) -> int:
+def _mpnn_remote(weights: str, orders: int, batch_size: int, limit: int | None,
+                 per_allele: bool = False) -> int:
     """R4: inverse-folding scores. 1.8 rows/s on a laptop CPU, far faster here."""
     _chdir()
     from hlaforge.data import load_raw
@@ -173,7 +194,7 @@ def _mpnn_remote(weights: str, orders: int, batch_size: int, limit: int | None) 
     df = load_raw(limit=limit)
     mat = score_structure(
         df, weights=weights, n_decoding_orders=orders,
-        batch_size=batch_size, device="cuda",
+        batch_size=batch_size, device="cuda", per_allele=per_allele,
     )
     artifacts.commit()
     return int(mat.shape[0])
@@ -242,8 +263,21 @@ def finetune(model: str = "esm2_t12", splits: str = "peptide,allele,strict", fol
 
 
 @app.local_entrypoint()
-def mpnn(weights: str = "v_48_020", orders: int = 4, batch_size: int = 64, limit: int = 0):
-    n = _mpnn_remote.remote(weights, orders, batch_size, limit or None)
+def fold(chunk_size: int = 128, wait: bool = True):
+    """Predict one groove structure per allele with ESMFold."""
+    if not wait:
+        call = _fold_remote.spawn(chunk_size)
+        print(f"spawned {call.object_id}; structures land on the volume")
+        return
+    res = _fold_remote.remote(chunk_size)
+    print(f"folded {res['n_grooves']} grooves, backbone shape {res['shape']}")
+    print("pull locally: modal volume get hlaforge-artifacts /structures artifacts/")
+
+
+@app.local_entrypoint()
+def mpnn(weights: str = "v_48_020", orders: int = 4, batch_size: int = 64, limit: int = 0,
+         per_allele: bool = False):
+    n = _mpnn_remote.remote(weights, orders, batch_size, limit or None, per_allele)
     print(f"scored {n} peptide-groove pairs with ProteinMPNN/{weights}")
     print("pull locally: modal volume get hlaforge-artifacts /embeddings artifacts/")
 
