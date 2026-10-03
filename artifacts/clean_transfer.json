@@ -1,0 +1,164 @@
+[
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "peptide",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.7950942215493416,
+    "auc": 0.8973756140548963,
+    "per_allele": 0.6390875274393402
+  },
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "peptide",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.8092297009160403,
+    "auc": 0.9054710515123854,
+    "per_allele": 0.6306382787410962
+  },
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "allele",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.5432169022598439,
+    "auc": 0.7723010821666602,
+    "per_allele": 0.5291415768809362
+  },
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "allele",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.5274909771857864,
+    "auc": 0.7567401897224181,
+    "per_allele": 0.48079112090869724
+  },
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "strict",
+    "subset": "all",
+    "n": 5668,
+    "spearman": 0.5419304611515371,
+    "auc": 0.767907160594106,
+    "per_allele": 0.46616843832771115
+  },
+  {
+    "arm": "R1_blosum_xgb",
+    "split": "strict",
+    "subset": "novel_only",
+    "n": 523,
+    "spearman": 0.5822489757062002,
+    "auc": 0.7992944317315027,
+    "per_allele": 0.5049407114624506
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "peptide",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.8290264282605819,
+    "auc": 0.9144480822783572,
+    "per_allele": 0.6831721345457078
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "peptide",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.8267858256816316,
+    "auc": 0.9137928016472346,
+    "per_allele": 0.6549611052055264
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "allele",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.6826711159521918,
+    "auc": 0.8348447636096945,
+    "per_allele": 0.6530937307078452
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "allele",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.6503952055117874,
+    "auc": 0.8124458658354425,
+    "per_allele": 0.6069678457505213
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "strict",
+    "subset": "all",
+    "n": 5668,
+    "spearman": 0.6719169144741475,
+    "auc": 0.8262617067698321,
+    "per_allele": 0.6016805378314001
+  },
+  {
+    "arm": "R6_affinity_plus_R1",
+    "split": "strict",
+    "subset": "novel_only",
+    "n": 523,
+    "spearman": 0.6843155354417686,
+    "auc": 0.8376679575192161,
+    "per_allele": 0.6146245059288538
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "peptide",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.6421719935566937,
+    "auc": 0.8165409690074594,
+    "per_allele": 0.5246756216297732
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "peptide",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.6318675599662148,
+    "auc": 0.8099722262561719,
+    "per_allele": 0.49680457013306667
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "allele",
+    "subset": "all",
+    "n": 28166,
+    "spearman": 0.5935920583330396,
+    "auc": 0.7939425646968097,
+    "per_allele": 0.5162587262288977
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "allele",
+    "subset": "novel_only",
+    "n": 2484,
+    "spearman": 0.5863767527474956,
+    "auc": 0.7893779044437991,
+    "per_allele": 0.49406425256263536
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "strict",
+    "subset": "all",
+    "n": 5668,
+    "spearman": 0.5775315481202395,
+    "auc": 0.7769829475689385,
+    "per_allele": 0.5004617883542842
+  },
+  {
+    "arm": "R6_affinity_alone",
+    "split": "strict",
+    "subset": "novel_only",
+    "n": 523,
+    "spearman": 0.5603759617560351,
+    "auc": 0.7715411019186763,
+    "per_allele": 0.632411067193676
+  }
+]

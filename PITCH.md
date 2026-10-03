@@ -2,7 +2,7 @@
 
 **Track 3, Serova Bio.** *Can protein foundation models improve peptide-HLA stability prediction?*
 
-Answer: **no, and we can say exactly why.**
+Answer: **no -- but pretraining on the *right* task wins big, and we can say exactly why.**
 
 ---
 
@@ -55,9 +55,12 @@ there.
 | ESM2-650M frozen | 12,800 | 0.597 | 0.321 | 0.251 |
 | ESM2 zero-shot likelihood | 14 | 0.117 | — | — |
 | ESM2 **fine-tuned end to end** | 35M params | 0.644 | 0.376 | 0.359 |
+| **BLOSUM + MHCflurry affinity transfer** | 913 | **0.829** | **0.683** | **0.672** |
 
-The one real win is swapping the incumbent's small neural net for gradient-boosted trees:
-**+0.040 on unseen peptides, +0.093 on the hardest split.** No foundation model involved.
+The real win is transfer from a neighbouring task: **+0.084 / +0.209 / +0.211** over the
+incumbent architecture. Audited for contamination -- 88.5% of our peptides are in MHCflurry's
+training corpus, so we re-scored on the 516 it has never seen. The gain holds: **+0.123 on
+unseen alleles, +0.102 where peptide and allele are both unseen.**
 
 ---
 

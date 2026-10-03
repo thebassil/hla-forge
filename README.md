@@ -45,6 +45,33 @@ architecture, retrained under these splits because the released tool saw all of 
 | `esm2_t33_mean_xgb` (650M PLM) | 12,800 | 0.597 | 0.321 | 0.251 |
 | `esm2t12_zeroshot_likelihood` | 14 | 0.117 | — | — |
 | `R5_finetune_esm2_t12_full` | 35M params | 0.644 | 0.376 | 0.359 |
+| `R1C_target_rank` (train on ranks) | 908 | 0.795 | 0.543 | 0.542 |
+| **`R6_affinity_plus_R1`** (+ transfer) | 913 | **0.829** | **0.683** | **0.672** |
+
+### The one thing that beats the incumbent by a wide margin
+
+Handing the same gradient-boosted trees five numbers from **MHCflurry**, a pretrained
+peptide-MHC *binding affinity* predictor, moves every split well past anything else here:
+**+0.084 / +0.209 / +0.211** over the NetMHCstabpan architecture, with fold standard deviations
+of 0.007 to 0.040. The five affinity features alone, with no sequence encoding at all, score
+0.578 on the strict split -- above BLOSUM's 0.555 and more than double ESM2-650M's 0.251.
+Zero-shot, MHCflurry's predicted affinity correlates -0.635 with measured half-life, against
+0.106 for ProteinMPNN geometry and 0.087 for ESM2's masked-LM likelihood.
+
+**And we audited it.** MHCflurry trained on IEDB affinity data, and 88.5% of our peptides appear
+in that corpus -- so our peptide holdout does not hold them out from the *feature*.
+`scripts/check_transfer_overlap.py` measures this and `scripts/clean_transfer_eval.py` re-scores
+on the 516 peptides MHCflurry has never seen:
+
+| split | gain, all rows | gain, novel peptides only |
+|---|---|---|
+| unseen peptide | +0.034 | +0.018 |
+| unseen allele | +0.139 | **+0.123** |
+| both unseen | +0.130 | **+0.102** |
+
+The gain survives, reduced. It is concentrated on the allele axis, which is what you would
+expect: MHCflurry is pan-specific and trained across far more alleles than this dataset holds,
+so what transfers is knowledge of grooves, not of peptides.
 
 Fold-to-fold standard deviation is ~0.01 on the peptide split, ~0.03 on strict, and **~0.12 on
 the allele split** — so allele-split differences below about 0.1 are not differences.
@@ -64,6 +91,14 @@ about 0.10 on within-allele ranking.
 **The deficit shrinks when labels are scarce, but never reverses.** Capping training data at 10
 rows per allele narrows the gap from -0.101 to -0.054. The pretraining prior is worth something
 where supervision runs out; it is never worth enough to win.
+
+**The useful prior is proximity to the task, not corpus size.** A 650M-parameter model trained
+on all of UniRef scores 0.251 where peptide and allele are both unseen. A far smaller model
+trained on peptide-MHC binding scores 0.578 on the same rows, and 0.672 alongside BLOSUM. Three
+published systems independently found the same thing: MINT reports +0.18 Spearman from a
+binding-affinity-to-stability curriculum, TLStab found affinity-as-a-feature competitive with
+its full transfer pipeline, and ESMCBA's win required continued pre-training on HLA peptides
+specifically.
 
 **Fine-tuning helps, and is still not enough.** Letting gradients into the encoder beats
 freezing it by +0.064 on unseen peptides and +0.108 on the hardest split -- a real effect, and
