@@ -189,9 +189,16 @@ Everything up to ESM2-150M runs locally on CPU/MPS. For ESM2-650M, residue-level
 fine-tuning, use Modal (hackathon credit):
 
 ```bash
-modal run modal_app.py::embed --model esm2_t33 --pooling mean
-modal volume get hlaforge-artifacts / artifacts/embeddings
+modal run modal_app.py::embed  --model esm2_t33 --pooling mean   # embeddings, ~2 min
+modal run modal_app.py::mpnn                                     # R4 inverse folding, 28k pairs
+modal run modal_app.py::queue  --families R2F                    # one container per experiment
+modal run --detach modal_app.py::finetune --model esm2_t33 --lora-rank 16
+
+modal volume get hlaforge-artifacts /embeddings artifacts/
 ```
+
+Use `--detach` for anything over a few minutes: without it, a dropped local client cancels the
+remote call.
 
 ## Layout
 
